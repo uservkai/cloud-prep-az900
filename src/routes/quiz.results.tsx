@@ -1,8 +1,11 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import type { QuizResult } from "@/types/quiz";
-import { findResult } from "@/store/results-store";
+import { loadResults } from "@/store/results-store";
+import { loadCloudResults } from "@/services/cloud-results";
+import { createClient } from "@/lib/supabase/client";
 import { buildQuiz, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
 import { topicName } from "@/data/syllabus";
@@ -34,17 +37,103 @@ export const Route = createFileRoute("/quiz/results")({
 function QuizResults() {
   const navigate = useNavigate();
   const search = Route.useSearch();
+
   const [result, setResult] = useState<QuizResult | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setResult(findResult(search.result));
-    setLoaded(true);
+    let active = true;
+
+    async function loadQuizResult() {
+      setLoaded(false);
+      setLoadError(null);
+      setResult(null);
+
+      // First, find the exact result saved on this device.
+      // This preserves the immediate results page after quiz submission.
+      const localResults = loadResults();
+      const localResult = search.result
+        ? localResults.find((r) => r.id === search.result)
+        : (localResults[0] ?? null);
+
+      if (localResult) {
+        if (active) {
+          setResult(localResult);
+          setLoaded(true);
+        }
+        return;
+      }
+
+      try {
+        // If unavailable locally, look for the result in the
+        // authenticated learner's Supabase history.
+        const supabase = createClient();
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) throw error;
+
+        if (!data.user) {
+          if (active) setLoaded(true);
+          return;
+        }
+
+        const cloudResults = await loadCloudResults();
+
+        const cloudResult = search.result
+          ? cloudResults.find((r) => r.id === search.result)
+          : (cloudResults[0] ?? null);
+
+        if (active) {
+          setResult(cloudResult ?? null);
+        }
+      } catch (error) {
+        console.error("Could not load quiz result:", error);
+
+        if (active) {
+          setLoadError(
+            "We couldn't retrieve this result from your account. Please try again."
+          );
+        }
+      } finally {
+        if (active) setLoaded(true);
+      }
+    }
+
+    void loadQuizResult();
+
+    return () => {
+      active = false;
+    };
   }, [search.result]);
+
 
   if (!loaded) {
     return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><p className="text-sm text-muted-foreground">Loading results…</p></div>;
   }
+
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+        <h1 className="font-display text-xl font-bold">
+          Unable to load result
+        </h1>
+
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {loadError}
+        </p>
+
+        <Link
+          to="/dashboard"
+          className={`${buttonPrimary} mt-6`}
+        >
+          Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
 
   if (!result) {
     return (
@@ -154,13 +243,12 @@ function QuizResults() {
               <span
                 key={item.questionId}
                 title={q ? q.stem : undefined}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold ${
-                  tone === "success"
-                    ? "bg-success-soft text-success"
-                    : tone === "danger"
-                      ? "bg-danger-soft text-danger"
-                      : "bg-muted text-muted-foreground"
-                }`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold ${tone === "success"
+                  ? "bg-success-soft text-success"
+                  : tone === "danger"
+                    ? "bg-danger-soft text-danger"
+                    : "bg-muted text-muted-foreground"
+                  }`}
               >
                 {i + 1}
               </span>

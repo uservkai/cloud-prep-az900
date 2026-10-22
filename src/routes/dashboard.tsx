@@ -257,19 +257,13 @@ function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Pill tone={pct >= 70 ? "success" : pct >= 40 ? "brand" : "danger"}>{pct}%</Pill>
-                    {dataSource === "cloud" && !loadResults().some((r) => r.id === result.id) ? (
-                      <span className="text-xs text-muted-foreground">
-                        Saved to account
-                      </span>
-                    ) : (
-                      <Link
-                        to="/quiz/results"
-                        search={{ result: result.id }}
-                        className="text-sm font-semibold text-primary hover:underline"
-                      >
-                        View result
-                      </Link>
-                    )}
+                    <Link
+                      to="/quiz/results"
+                      search={{ result: result.id }}
+                      className="text-sm font-semibold text-primary hover:underline"
+                    >
+                      View result
+                    </Link>
                   </div>
                 </li>
               );
