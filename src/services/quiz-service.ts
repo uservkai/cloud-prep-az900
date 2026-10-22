@@ -1,11 +1,6 @@
 import { pendingQuestions, questions, reviewedQuestions } from "@/data/questions";
 import { topics } from "@/data/syllabus";
-import type {
-  QuizConfig,
-  QuizQuestion,
-  QuizResult,
-  QuizSession,
-} from "@/types/quiz";
+import type { QuizConfig, QuizQuestion, QuizResult, QuizSession } from "@/types/quiz";
 
 /** True when the question passes the config's domain/topic/difficulty filters. */
 export function matchesConfig(question: QuizQuestion, config: QuizConfig): boolean {
@@ -76,7 +71,10 @@ export function buildResult(session: QuizSession): QuizResult {
   let correct = 0;
 
   for (const question of session.questions) {
-    const chosen = session.submitted[question.id] ?? null;
+    const chosen =
+      session.config.mode === "assessment"
+        ? (session.choices[question.id] ?? null)
+        : (session.submitted[question.id] ?? null);
     const isCorrect = chosen !== null && isChoiceCorrect(question, chosen);
     if (isCorrect) correct++;
     items.push({ questionId: question.id, chosenOptionId: chosen, correct: isCorrect });
