@@ -1,6 +1,8 @@
+/* eslint-disable prettier/prettier */
 import type { Difficulty, DomainId, QuizQuestion, ReviewStatus } from "@/types/quiz";
 import { topicById } from "./syllabus";
 import { batch1Questions } from "./questions-expanded/cloud-concepts-batch-1";
+import { expansionCandidateQuestions } from "./questions-expanded/az900-candidates";
 
 /**
  * Original, manually curated AZ-900 practice questions.
@@ -1535,7 +1537,7 @@ const specs: QuestionSpec[] = [
   },
 ];
 
-export const questions: QuizQuestion[] = [...specs.map(buildQuestion), ...batch1Questions];
+export const questions: QuizQuestion[] = [...specs.map(buildQuestion), ...batch1Questions, ...expansionCandidateQuestions,];
 
 /** Questions allowed in active quizzes: manually reviewed with a verified source. */
 export const reviewedQuestions: QuizQuestion[] = questions.filter(
