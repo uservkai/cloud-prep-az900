@@ -70,6 +70,8 @@ export interface QuizConfig {
 export interface QuizSession {
   id: string;
   startedAt: string;
+  /** ISO deadline for timed sessions; null when untimed. Never reset on refresh. */
+  deadline?: string | null;
   config: QuizConfig;
   questions: QuizQuestion[];
   /** Current question position (0-based). */
