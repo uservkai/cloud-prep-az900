@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useHydrated, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Flag } from "lucide-react";
 import { topicName } from "@/data/syllabus";
 import { isChoiceCorrect } from "@/services/quiz-service";
-import { quizStore, useQuizSession } from "@/store/quiz-session";
+import { quizStore, useQuizSession, useRestoreError } from "@/store/quiz-session";
 import { FeedbackPanel, OptionList } from "@/components/question-card";
 import { buttonPrimary, buttonSecondary, Pill, ProgressBar } from "@/components/ui";
 
@@ -29,24 +29,35 @@ export const Route = createFileRoute("/quiz/run")({
 
 function QuizRun() {
   const navigate = useNavigate();
+  const hydrated = useHydrated();
   const session = useQuizSession();
+  const restoreError = useRestoreError();
   const [redirecting, setRedirecting] = useState(false);
   const finishingRef = useRef(false);
 
   useEffect(() => {
-    if (!session && !finishingRef.current) {
+    // Only decide after the saved session has been read from the browser.
+    if (hydrated && !session && !restoreError && !finishingRef.current) {
       setRedirecting(true);
       void navigate({ to: "/quiz/setup" });
     }
-  }, [session, navigate]);
+  }, [hydrated, session, restoreError, navigate]);
+
+  if (!hydrated) {
+    return <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6" aria-busy="true" />;
+  }
 
   if (!session || session.questions.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <p className="text-sm text-muted-foreground">
-          {redirecting ? "Taking you to quiz setup…" : "No active quiz."}
+        <p className="text-sm text-muted-foreground" role={restoreError ? "alert" : undefined}>
+          {restoreError ?? (redirecting ? "Taking you to quiz setup…" : "No active quiz.")}
         </p>
-        <Link to="/quiz/setup" className={`${buttonPrimary} mt-4`}>
+        <Link
+          to="/quiz/setup"
+          onClick={() => quizStore.dismissRestoreError()}
+          className={`${buttonPrimary} mt-4`}
+        >
           Go to quiz setup
         </Link>
       </div>
