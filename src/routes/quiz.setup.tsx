@@ -68,10 +68,17 @@ function QuizSetup() {
     }
   }
 
-  function startQuiz() {
+  const [confirmReplace, setConfirmReplace] = useState(false);
+
+  function startQuiz(force = false) {
+    if (!force && quizStore.getActive()) {
+      setConfirmReplace(true);
+      return;
+    }
     const picked = buildQuiz(config);
     if (picked.length === 0) return;
     if (quizStore.start(config, picked)) {
+      setConfirmReplace(false);
       void navigate({ to: "/quiz/run" });
     }
   }
