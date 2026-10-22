@@ -263,12 +263,32 @@ export const quizStore = {
   },
 
   /** Finish the quiz: grade, store the result, clear only the active session. */
+
   finish(): QuizResult | null {
     const session = state.session;
     if (!session) return null;
+
     const result = buildResult(session);
+
+    // Always save locally first.
     saveResult(result);
-    setState({ session: null, lastResultId: result.id, restoreError: null });
+
+    setState({
+      session: null,
+      lastResultId: result.id,
+      restoreError: null,
+    });
+
+    // Signed-in learners also get cloud persistence.
+    // This must not delay displaying their quiz results.
+    if (typeof window !== "undefined") {
+      void import("@/services/cloud-results")
+        .then(({ saveCloudResult }) => saveCloudResult(result))
+        .catch((error: unknown) => {
+          console.error("Cloud result synchronization failed:", error);
+        });
+    }
+
     return result;
   },
 
