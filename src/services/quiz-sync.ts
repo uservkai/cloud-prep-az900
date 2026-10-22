@@ -1,4 +1,3 @@
-
 import type { QuizResult } from "@/types/quiz";
 import { createClient } from "@/lib/supabase/client";
 import { saveCloudResult } from "@/services/cloud-results";
@@ -13,7 +12,7 @@ function readPending(userId: string): QuizResult[] {
   try {
     const raw = localStorage.getItem(queueKey(userId));
     const parsed: unknown = JSON.parse(raw ?? "[]");
-    return Array.isArray(parsed) ? parsed as QuizResult[] : [];
+    return Array.isArray(parsed) ? (parsed as QuizResult[]) : [];
   } catch {
     return [];
   }
@@ -24,9 +23,7 @@ function writePending(userId: string, results: QuizResult[]): void {
 }
 
 function removePending(userId: string, resultId: string): void {
-  const remaining = readPending(userId).filter(
-    (result) => result.id !== resultId
-  );
+  const remaining = readPending(userId).filter((result) => result.id !== resultId);
   writePending(userId, remaining);
 }
 
@@ -34,27 +31,30 @@ function removePending(userId: string, resultId: string): void {
  * Save a result to the current learner's pending queue,
  * then attempt its upload.
  */
-export async function queueCloudResult(
-  result: QuizResult
-): Promise<void> {
+export async function queueCloudResult(result: QuizResult): Promise<void> {
   if (typeof window === "undefined") return;
 
   const supabase = createClient();
-  const { data, error } = await supabase.auth.getUser();
+
+  // Use the locally cached login to identify the learner,
+  // even when the browser is offline.
+  const { data, error } = await supabase.auth.getSession();
 
   if (error) throw error;
 
-  // Guests retain local results without assigning them
-  // to an account they haven't signed into.
-  if (!data.user) return;
+  // Guest results stay local.
+  if (!data.session?.user) return;
 
-  const userId = data.user.id;
+  const userId = data.session.user.id;
   const existing = readPending(userId);
 
+  // Save the quiz to the pending queue BEFORE
+  // attempting any network request.
   if (!existing.some((item) => item.id === result.id)) {
     writePending(userId, [...existing, result]);
   }
 
+  // Try uploading. If offline, the quiz remains queued.
   await syncPendingCloudResults(userId);
 }
 
@@ -63,9 +63,7 @@ const running = new Set<string>();
 /**
  * Retry pending results only for their original owner.
  */
-export async function syncPendingCloudResults(
-  expectedUserId?: string
-): Promise<void> {
+export async function syncPendingCloudResults(expectedUserId?: string): Promise<void> {
   if (typeof window === "undefined") return;
 
   const supabase = createClient();
@@ -93,11 +91,7 @@ export async function syncPendingCloudResults(
           removePending(userId, result.id);
         }
       } catch (error) {
-        console.error(
-          "Quiz upload pending retry:",
-          result.id,
-          error
-        );
+        console.error("Quiz upload pending retry:", result.id, error);
 
         // Keep the result queued for a later retry.
       }
