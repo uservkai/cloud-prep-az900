@@ -78,8 +78,6 @@ export interface QuizSession {
   choices: Record<string, string>;
   /** Submitted, graded option id per question id. */
   submitted: Record<string, string>;
-  /** Practice mode: feedback panel is visible for the current question. */
-  showFeedback: boolean;
 }
 
 export interface QuizResultItem {
