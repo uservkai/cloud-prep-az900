@@ -28,6 +28,20 @@ function removePending(userId: string, resultId: string): void {
 }
 
 /**
+ * Queue a completed quiz under its verified owner before
+ * attempting any network operation.
+ */
+export function enqueuePendingCloudResult(userId: string, result: QuizResult): void {
+  if (typeof window === "undefined") return;
+
+  const existing = readPending(userId);
+
+  if (!existing.some((item) => item.id === result.id)) {
+    writePending(userId, [...existing, result]);
+  }
+}
+
+/**
  * Save a result to the current learner's pending queue,
  * then attempt its upload.
  */

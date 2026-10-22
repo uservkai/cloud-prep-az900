@@ -1,11 +1,7 @@
-/* eslint-disable prettier/prettier */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, X, PlayCircle, ExternalLink } from "lucide-react";
-import {
-  mistakeQuestions,
-  mistakeQuestionsFromResults,
-} from "@/store/results-store";
+import { mistakeQuestions, mistakeQuestionsFromResults } from "@/store/results-store";
 import { createClient } from "@/lib/supabase/client";
 import { loadCloudResults } from "@/services/cloud-results";
 import { buildQuizFromQuestionIds, questionById } from "@/services/quiz-service";
@@ -37,65 +33,86 @@ export const Route = createFileRoute("/review")({
 function MistakesReview() {
   const navigate = useNavigate();
 
-  const [mistakes, setMistakes] = useState<
-    ReturnType<typeof mistakeQuestions> | null
-  >(null);
+  const [mistakes, setMistakes] = useState<ReturnType<typeof mistakeQuestions> | null>(null);
 
-  const [dataSource, setDataSource] = useState<
-    "local" | "cloud" | null
-  >(null);
+  const [dataSource, setDataSource] = useState<"local" | "cloud" | null>(null);
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    let requestId = 0;
+    let currentUserId: string | null | undefined = undefined;
 
-    async function loadMistakes() {
-      try {
-        const supabase = createClient();
+    const supabase = createClient();
 
-        const { data, error } = await supabase.auth.getUser();
+    function handleAccountChange(userId: string | null) {
+      if (!active || currentUserId === userId) return;
 
-        if (error) throw error;
-        if (!active) return;
+      currentUserId = userId;
+      const thisRequest = ++requestId;
 
-        if (data.user) {
-          // Signed-in learners see their own cloud history.
-          const cloudResults = await loadCloudResults();
+      // Immediately clear the previous account's mistakes.
+      setMistakes(null);
+      setDataSource(null);
+      setLoadError(null);
 
-          if (active) {
-            setMistakes(mistakeQuestionsFromResults(cloudResults));
-            setDataSource("cloud");
-          }
-        } else {
-          // Guests continue using their local quiz history.
+      if (!userId) {
+        // Signed out: load local results without making a network request.
+        try {
           setMistakes(mistakeQuestions());
           setDataSource("local");
+        } catch (error) {
+          console.error("Failed to load local mistakes:", error);
+          setLoadError("Unable to load mistakes saved on this device.");
         }
-      } catch (error) {
-        console.error("Failed to load mistakes:", error);
 
-        if (active) {
-          setLoadError(
-            "Unable to load your saved mistakes. Please check your connection and try again."
-          );
-        }
+        return;
       }
+
+      // Signed in: load only the current user's Supabase results.
+      // Defer the request until outside the auth callback.
+      setTimeout(() => {
+        if (!active || thisRequest !== requestId) return;
+
+        void loadCloudResults()
+          .then((cloudResults) => {
+            if (!active || thisRequest !== requestId) return;
+
+            setMistakes(mistakeQuestionsFromResults(cloudResults));
+            setDataSource("cloud");
+          })
+          .catch((error: unknown) => {
+            if (!active || thisRequest !== requestId) return;
+
+            console.error("Failed to load cloud mistakes:", error);
+
+            setLoadError(
+              "Unable to load your saved mistakes. Please check your connection and try again.",
+            );
+          });
+      }, 0);
     }
 
-    void loadMistakes();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        handleAccountChange(session?.user?.id ?? null);
+      }
+    });
 
     return () => {
       active = false;
+      requestId++;
+      subscription.unsubscribe();
     };
   }, []);
 
   if (loadError) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h1 className="font-display text-2xl font-bold">
-          Mistakes review
-        </h1>
+        <h1 className="font-display text-2xl font-bold">Mistakes review</h1>
 
         <p role="alert" className="mt-4 text-sm text-danger">
           {loadError}
@@ -113,13 +130,19 @@ function MistakesReview() {
   }
 
   if (!mistakes) {
-    return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><p className="text-sm text-muted-foreground">Loading your mistakes…</p></div>;
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
+        <p className="text-sm text-muted-foreground">Loading your mistakes…</p>
+      </div>
+    );
   }
 
   if (mistakes.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Mistakes review</h1>
+        <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+          Mistakes review
+        </h1>
         <div className="mt-8">
           <EmptyState
             title="No mistakes recorded"
@@ -158,11 +181,12 @@ function MistakesReview() {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Mistakes review</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+            Mistakes review
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mistakes.length} question
-            {mistakes.length === 1 ? "" : "s"} you answered
-            incorrectly, with the answer you chose.
+            {mistakes.length === 1 ? "" : "s"} you answered incorrectly, with the answer you chose.
           </p>
 
           <p className="mt-2 text-xs text-muted-foreground">
@@ -170,7 +194,6 @@ function MistakesReview() {
               ? "Showing mistakes saved to your CloudPrep account."
               : "Showing mistakes saved on this device."}
           </p>
-
         </div>
         <button type="button" onClick={practiseMistakes} className={buttonPrimary}>
           <PlayCircle className="h-4 w-4" aria-hidden />
@@ -208,7 +231,9 @@ function MistakesReview() {
                   </span>
                 </p>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{question.correctExplanation}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {question.correctExplanation}
+              </p>
               {question.sourceUrl ? (
                 <a
                   href={question.sourceUrl}

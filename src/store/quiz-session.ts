@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { QuizConfig, QuizQuestion, QuizResult, QuizSession } from "@/types/quiz";
 import { reviewedQuestions } from "@/data/questions";
 import { buildResult } from "@/services/quiz-service";
-import { saveResult } from "@/store/results-store";
+import { saveResult, saveAccountResult } from "@/store/results-store";
 
 /**
  * Active quiz session, persisted to localStorage so a refresh or reopen
@@ -264,14 +264,37 @@ export const quizStore = {
 
   /** Finish the quiz: grade, store the result, clear only the active session. */
 
-  finish(): QuizResult | null {
+  async finish(): Promise<QuizResult | null> {
     const session = state.session;
     if (!session) return null;
 
     const result = buildResult(session);
+    let userId: string | null = null;
 
-    // Always save locally first.
-    saveResult(result);
+    if (typeof window !== "undefined") {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      const { data, error } = await supabase.auth.getSession();
+
+      // Never treat an authentication error as proof of guest status.
+      if (error) throw error;
+
+      userId = data.session?.user?.id ?? null;
+
+      if (userId) {
+        const { enqueuePendingCloudResult } = await import("@/services/quiz-sync");
+
+        // Queue first, preserving offline synchronization.
+        enqueuePendingCloudResult(userId, result);
+
+        // Also keep this account's recent results locally.
+        saveAccountResult(result, userId);
+      } else {
+        // Only genuine guest quizzes enter guest history.
+        saveResult(result);
+      }
+    }
 
     setState({
       session: null,
@@ -279,11 +302,13 @@ export const quizStore = {
       restoreError: null,
     });
 
-    if (typeof window !== "undefined") {
+    if (userId) {
+      const expectedUserId = userId;
+
       void import("@/services/quiz-sync")
-        .then(({ queueCloudResult }) => queueCloudResult(result))
+        .then(({ syncPendingCloudResults }) => syncPendingCloudResults(expectedUserId))
         .catch((error: unknown) => {
-          console.error("Unable to queue cloud quiz result:", error);
+          console.error("Unable to synchronize quiz result:", error);
         });
     }
 

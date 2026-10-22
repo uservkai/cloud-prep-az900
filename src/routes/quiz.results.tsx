@@ -1,15 +1,21 @@
-/* eslint-disable prettier/prettier */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import type { QuizResult } from "@/types/quiz";
-import { loadResults } from "@/store/results-store";
+import { loadResults, loadAccountResults } from "@/store/results-store";
 import { loadCloudResults } from "@/services/cloud-results";
 import { createClient } from "@/lib/supabase/client";
 import { buildQuiz, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
 import { topicName } from "@/data/syllabus";
-import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar } from "@/components/ui";
+import {
+  AccuracyRing,
+  buttonPrimary,
+  buttonSecondary,
+  EmptyState,
+  Pill,
+  ProgressBar,
+} from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/results")({
   validateSearch: (search: Record<string, unknown>): { result?: string | undefined } => ({
@@ -44,96 +50,106 @@ function QuizResults() {
 
   useEffect(() => {
     let active = true;
+    let requestId = 0;
 
-    async function loadQuizResult() {
+    const supabase = createClient();
+
+    function pickResult(results: QuizResult[]): QuizResult | null {
+      if (search.result) {
+        return results.find((item) => item.id === search.result) ?? null;
+      }
+
+      return results[0] ?? null;
+    }
+
+    function handleAccountChange(userId: string | null) {
+      if (!active) return;
+
+      const thisRequest = ++requestId;
+
+      // Clear the previous learner's result immediately.
+      setResult(null);
       setLoaded(false);
       setLoadError(null);
-      setResult(null);
 
-      // First, find the exact result saved on this device.
-      // This preserves the immediate results page after quiz submission.
-      const localResults = loadResults();
-      const localResult = search.result
-        ? localResults.find((r) => r.id === search.result)
-        : (localResults[0] ?? null);
-
-      if (localResult) {
-        if (active) {
-          setResult(localResult);
-          setLoaded(true);
-        }
+      if (!userId) {
+        // Guests can only see guest-owned local results.
+        setResult(pickResult(loadResults()));
+        setLoaded(true);
         return;
       }
 
-      try {
-        // If unavailable locally, look for the result in the
-        // authenticated learner's Supabase history.
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.getUser();
+      // Check this account's own local results first.
+      const localResult = pickResult(loadAccountResults(userId));
 
-        if (error) throw error;
-
-        if (!data.user) {
-          if (active) setLoaded(true);
-          return;
-        }
-
-        const cloudResults = await loadCloudResults();
-
-        const cloudResult = search.result
-          ? cloudResults.find((r) => r.id === search.result)
-          : (cloudResults[0] ?? null);
-
-        if (active) {
-          setResult(cloudResult ?? null);
-        }
-      } catch (error) {
-        console.error("Could not load quiz result:", error);
-
-        if (active) {
-          setLoadError(
-            "We couldn't retrieve this result from your account. Please try again."
-          );
-        }
-      } finally {
-        if (active) setLoaded(true);
+      if (localResult) {
+        setResult(localResult);
+        setLoaded(true);
+        return;
       }
+
+      // Older account results may exist only in Supabase.
+      // Run this outside the auth-state callback.
+      setTimeout(() => {
+        if (!active || thisRequest !== requestId) return;
+
+        void loadCloudResults()
+          .then((cloudResults) => {
+            if (!active || thisRequest !== requestId) return;
+            setResult(pickResult(cloudResults));
+          })
+          .catch((error: unknown) => {
+            if (!active || thisRequest !== requestId) return;
+
+            console.error("Could not load quiz result:", error);
+            setLoadError("We couldn't retrieve this result from your account. Please try again.");
+          })
+          .finally(() => {
+            if (active && thisRequest === requestId) {
+              setLoaded(true);
+            }
+          });
+      }, 0);
     }
 
-    void loadQuizResult();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        handleAccountChange(session?.user?.id ?? null);
+      }
+    });
 
     return () => {
       active = false;
+      requestId++;
+      subscription.unsubscribe();
     };
   }, [search.result]);
 
-
   if (!loaded) {
-    return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><p className="text-sm text-muted-foreground">Loading results…</p></div>;
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
+        <p className="text-sm text-muted-foreground">Loading results…</p>
+      </div>
+    );
   }
-
 
   if (loadError) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h1 className="font-display text-xl font-bold">
-          Unable to load result
-        </h1>
+        <h1 className="font-display text-xl font-bold">Unable to load result</h1>
 
         <p role="alert" className="mt-3 text-sm text-danger">
           {loadError}
         </p>
 
-        <Link
-          to="/dashboard"
-          className={`${buttonPrimary} mt-6`}
-        >
+        <Link to="/dashboard" className={`${buttonPrimary} mt-6`}>
           Back to dashboard
         </Link>
       </div>
     );
   }
-
 
   if (!result) {
     return (
@@ -167,10 +183,12 @@ function QuizResults() {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Quiz complete</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+            Quiz complete
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {result.mode === "practice" ? "Practice mode" : "Assessment mode"} · {result.total} questions ·{" "}
-            {new Date(result.completedAt).toLocaleString()}
+            {result.mode === "practice" ? "Practice mode" : "Assessment mode"} · {result.total}{" "}
+            questions · {new Date(result.completedAt).toLocaleString()}
           </p>
         </div>
         <Pill tone={pct >= 70 ? "success" : pct >= 40 ? "brand" : "danger"}>
@@ -193,14 +211,16 @@ function QuizResults() {
           </div>
           <div>
             <dt className="text-sm text-muted-foreground">Skipped</dt>
-            <dd className="font-display text-2xl font-bold text-muted-foreground">{skipped.length}</dd>
+            <dd className="font-display text-2xl font-bold text-muted-foreground">
+              {skipped.length}
+            </dd>
           </div>
         </dl>
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Score calculated from your submitted answers. This is practice feedback, not an official Microsoft
-        score or a guarantee of exam readiness.
+        Score calculated from your submitted answers. This is practice feedback, not an official
+        Microsoft score or a guarantee of exam readiness.
       </p>
 
       {/* Performance by topic */}
@@ -238,17 +258,22 @@ function QuizResults() {
         <div className="mt-4 flex flex-wrap gap-2">
           {result.items.map((item, i) => {
             const q = questionById(item.questionId);
-            const tone = item.correct ? "success" : item.chosenOptionId === null ? "neutral" : "danger";
+            const tone = item.correct
+              ? "success"
+              : item.chosenOptionId === null
+                ? "neutral"
+                : "danger";
             return (
               <span
                 key={item.questionId}
                 title={q ? q.stem : undefined}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold ${tone === "success"
-                  ? "bg-success-soft text-success"
-                  : tone === "danger"
-                    ? "bg-danger-soft text-danger"
-                    : "bg-muted text-muted-foreground"
-                  }`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold ${
+                  tone === "success"
+                    ? "bg-success-soft text-success"
+                    : tone === "danger"
+                      ? "bg-danger-soft text-danger"
+                      : "bg-muted text-muted-foreground"
+                }`}
               >
                 {i + 1}
               </span>
@@ -276,7 +301,6 @@ function QuizResults() {
           Back to dashboard
         </Link>
       </div>
-
     </div>
   );
 }
