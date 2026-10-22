@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
@@ -6,6 +7,8 @@ import { loadResults } from "@/store/results-store";
 import { topics, topicName } from "@/data/syllabus";
 import { questionById } from "@/services/quiz-service";
 import { buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar, StatCard } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { loadCloudResults } from "@/services/cloud-results";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -56,10 +59,52 @@ const SAMPLE = {
 
 function Dashboard() {
   const [results, setResults] = useState<QuizResult[] | null>(null);
+  const [dataSource, setDataSource] = useState<
+    "local" | "cloud" | "cloud-error"
+  >("local");
+
 
   useEffect(() => {
-    setResults(loadResults());
+    let active = true;
+
+    async function loadDashboard() {
+      // Display locally saved results immediately.
+      const localResults = loadResults();
+
+      if (active) {
+        setResults(localResults);
+        setDataSource("local");
+      }
+
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) throw error;
+        if (!active || !data.user) return;
+
+        const cloudResults = await loadCloudResults();
+
+        if (active) {
+          setResults(cloudResults);
+          setDataSource("cloud");
+        }
+      } catch (error) {
+        console.error("Could not load cloud history:", error);
+
+        if (active) {
+          setDataSource("cloud-error");
+        }
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
 
   const stats = useMemo(() => {
     if (!results) return null;
@@ -93,7 +138,9 @@ function Dashboard() {
           <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Your practice dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {hasData
-              ? "Calculated from quizzes you completed on this device."
+              ? dataSource === "cloud"
+                ? "Calculated from your recent quizzes saved to Supabase."
+                : "Calculated from quizzes saved on this device."
               : "Here's what your progress will look like as you practise."}
           </p>
         </div>
@@ -104,10 +151,14 @@ function Dashboard() {
       </div>
 
       <div className="mt-4">
-        <Pill tone={hasData ? "brand" : "warning"}>
-          {hasData
-            ? "Stored locally on this device — no account persistence yet"
-            : "Illustrative sample data — not real results"}
+        <Pill tone={dataSource === "cloud-error" ? "warning" : hasData ? "brand" : "warning"}>
+          {dataSource === "cloud-error"
+            ? "Cloud history unavailable — showing local results"
+            : dataSource === "cloud"
+              ? "Synced account history — Supabase"
+              : hasData
+                ? "Stored locally on this device"
+                : "Illustrative sample data — not real results"}
         </Pill>
       </div>
 
@@ -206,9 +257,19 @@ function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Pill tone={pct >= 70 ? "success" : pct >= 40 ? "brand" : "danger"}>{pct}%</Pill>
-                    <Link to="/quiz/results" search={{ result: result.id }} className="text-sm font-semibold text-primary hover:underline">
-                      View result
-                    </Link>
+                    {dataSource === "cloud" && !loadResults().some((r) => r.id === result.id) ? (
+                      <span className="text-xs text-muted-foreground">
+                        Saved to account
+                      </span>
+                    ) : (
+                      <Link
+                        to="/quiz/results"
+                        search={{ result: result.id }}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        View result
+                      </Link>
+                    )}
                   </div>
                 </li>
               );
