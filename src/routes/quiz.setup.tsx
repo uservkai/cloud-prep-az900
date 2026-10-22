@@ -241,7 +241,7 @@ function QuizSetup() {
         </div>
 
         {confirmReplace ? (
-          <div role="alertdialog" aria-label="Active quiz in progress" className="rounded-xl border border-warning bg-warning-soft p-4">
+          <div role="alertdialog" aria-label="Active quiz in progress" className="rounded-xl border border-warning bg-muted p-4">
             <p className="text-sm font-semibold text-foreground">You already have a quiz in progress.</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Starting a new quiz will discard its unfinished answers. Completed results are kept.
