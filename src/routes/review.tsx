@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, X, PlayCircle, ExternalLink } from "lucide-react";
 import { mistakeQuestions } from "@/store/results-store";
-import { buildQuizFromQuestionIds } from "@/services/quiz-service";
+import { buildQuizFromQuestionIds, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
 import type { QuizConfig } from "@/types/quiz";
 import { topicName } from "@/data/syllabus";
@@ -94,7 +94,7 @@ function MistakesReview() {
 
       <div className="mt-8 space-y-5">
         {mistakes.map(({ entry, chosenText }) => {
-          const question = buildQuizFromQuestionIds([entry.questionId])[0];
+          const question = questionById(entry.questionId);
           if (!question) return null;
           const correctOption = question.options.find((o) => o.id === question.correctOptionId);
           return (

@@ -5,7 +5,7 @@ import type { QuizResult } from "@/types/quiz";
 import { loadResults } from "@/store/results-store";
 import { topics, topicName } from "@/data/syllabus";
 import { questionById } from "@/services/quiz-service";
-import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar, StatCard } from "@/components/ui";
+import { buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar, StatCard } from "@/components/ui";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({

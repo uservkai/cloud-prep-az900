@@ -5,7 +5,7 @@ import type { QuizResult } from "@/types/quiz";
 import { findResult } from "@/store/results-store";
 import { buildQuiz, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
-import { topics, topicName } from "@/data/syllabus";
+import { topicName } from "@/data/syllabus";
 import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar } from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/results")({
@@ -188,7 +188,6 @@ function QuizResults() {
         </Link>
       </div>
 
-      {topics.length === 0 ? null : null}
     </div>
   );
 }
