@@ -137,8 +137,8 @@ describe("scoring", () => {
   });
 
   it("counts skipped questions as incorrect", () => {
-    const picked = buildQuiz({ ...allConfig, requestedCount: 5 });
-    const result = buildResult(sessionFor(allConfig, {}));
+    const config: QuizConfig = { ...allConfig, requestedCount: 5 };
+    const result = buildResult(sessionFor(config, {}));
     expect(result.total).toBe(5);
     expect(result.correct).toBe(0);
     expect(result.incorrect).toBe(5);
