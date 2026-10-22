@@ -205,7 +205,22 @@ export async function loadCloudResults(): Promise<QuizResult[]> {
   if (sessionsError) throw sessionsError;
   if (!sessions?.length) return [];
 
-  // Fetch answers in batches to avoid large result sets.
+  // Fetch answer batches concurrently to reduce loading time.
+  const batches = [];
+
+  for (let i = 0; i < sessions.length; i += 10) {
+    const ids = sessions.slice(i, i + 10).map((s) => s.id);
+
+    batches.push(
+      supabase
+        .from("quiz_answers")
+        .select("session_id, question_id, selected_option_ids, is_correct")
+        .in("session_id", ids),
+    );
+  }
+
+  const batchResults = await Promise.all(batches);
+
   const allAnswers: Array<{
     session_id: string;
     question_id: string;
@@ -213,14 +228,7 @@ export async function loadCloudResults(): Promise<QuizResult[]> {
     is_correct: boolean | null;
   }> = [];
 
-  for (let i = 0; i < sessions.length; i += 10) {
-    const ids = sessions.slice(i, i + 10).map((s) => s.id);
-
-    const { data, error } = await supabase
-      .from("quiz_answers")
-      .select("session_id, question_id, selected_option_ids, is_correct")
-      .in("session_id", ids);
-
+  for (const { data, error } of batchResults) {
     if (error) throw error;
     allAnswers.push(...(data ?? []));
   }
