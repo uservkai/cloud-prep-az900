@@ -66,6 +66,7 @@ function QuizResults() {
   const skipped = result.items.filter((i) => i.chosenOptionId === null);
 
   function retry() {
+    if (!result) return;
     const picked = buildQuiz(result.config);
     if (picked.length === 0) return;
     if (quizStore.start(result.config, picked)) {

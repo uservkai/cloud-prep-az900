@@ -1,4 +1,4 @@
-import { SyllabusTopic } from "@/data/syllabus";
+import type { SyllabusTopic } from "@/types/quiz";
 import type { TopicCoverage } from "@/services/quiz-service";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, Lock } from "lucide-react";
