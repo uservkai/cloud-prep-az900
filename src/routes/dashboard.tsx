@@ -65,47 +65,69 @@ function Dashboard() {
 
   useEffect(() => {
     let active = true;
+    let requestId = 0;
+    let currentUserId: string | null | undefined = undefined;
 
-    async function loadDashboard() {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.getUser();
+    const supabase = createClient();
 
-        if (!active) return;
+    function handleAccountChange(userId: string | null) {
+      if (!active) return;
 
-        if (error) throw error;
+      // Avoid reloading the same account unnecessarily.
+      if (currentUserId === userId) return;
 
-        if (data.user) {
-          // Signed-in learners see their own cloud history.
-          const cloudResults = await loadCloudResults();
+      currentUserId = userId;
+      const thisRequest = ++requestId;
 
-          if (active) {
+      // Immediately clear results from the previous account.
+      setResults(null);
+      setDataSource("local");
+
+      if (!userId) {
+        // Guest Mode: load local results immediately.
+        setResults(loadResults());
+        return;
+      }
+
+      // Fetch cloud history after the authentication callback.
+      setTimeout(() => {
+        if (!active || thisRequest !== requestId) return;
+
+        void loadCloudResults()
+          .then((cloudResults) => {
+            if (!active || thisRequest !== requestId) return;
+
             setResults(cloudResults);
             setDataSource("cloud");
-          }
-        } else {
-          // Guests see results saved on this device.
-          if (active) {
-            setResults(loadResults());
-            setDataSource("local");
-          }
-        }
-      } catch (error) {
-        console.error("Could not load cloud history:", error);
+          })
+          .catch((error: unknown) => {
+            if (!active || thisRequest !== requestId) return;
 
-        if (active) {
-          // Do not expose shared local history when
-          // account ownership cannot be verified.
-          setResults([]);
-          setDataSource("cloud-error");
-        }
-      }
+            console.error("Could not load cloud history:", error);
+            setResults([]);
+            setDataSource("cloud-error");
+          });
+      }, 0);
     }
 
-    void loadDashboard();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (
+          event === "INITIAL_SESSION" ||
+          event === "SIGNED_IN" ||
+          event === "SIGNED_OUT"
+        ) {
+          handleAccountChange(session?.user?.id ?? null);
+        }
+      }
+    );
 
     return () => {
       active = false;
+      requestId++;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -261,8 +283,8 @@ function Dashboard() {
                     {row.correct}/{row.total} ·{" "}
                     {row.total > 0
                       ? Math.round(
-                          (row.correct / row.total) * 100
-                        )
+                        (row.correct / row.total) * 100
+                      )
                       : 0}
                     %
                   </span>
@@ -274,10 +296,10 @@ function Dashboard() {
                   max={row.total}
                   tone={
                     row.total > 0 &&
-                    row.correct / row.total >= 0.7
+                      row.correct / row.total >= 0.7
                       ? "success"
                       : row.total > 0 &&
-                          row.correct / row.total >= 0.4
+                        row.correct / row.total >= 0.4
                         ? "brand"
                         : "danger"
                   }
@@ -322,8 +344,8 @@ function Dashboard() {
               const pct =
                 result.total > 0
                   ? Math.round(
-                      (result.correct / result.total) * 100
-                    )
+                    (result.correct / result.total) * 100
+                  )
                   : 0;
 
               const mistakes = result.items.filter(
