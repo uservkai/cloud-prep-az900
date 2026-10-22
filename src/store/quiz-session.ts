@@ -279,13 +279,11 @@ export const quizStore = {
       restoreError: null,
     });
 
-    // Signed-in learners also get cloud persistence.
-    // This must not delay displaying their quiz results.
     if (typeof window !== "undefined") {
-      void import("@/services/cloud-results")
-        .then(({ saveCloudResult }) => saveCloudResult(result))
+      void import("@/services/quiz-sync")
+        .then(({ queueCloudResult }) => queueCloudResult(result))
         .catch((error: unknown) => {
-          console.error("Cloud result synchronization failed:", error);
+          console.error("Unable to queue cloud quiz result:", error);
         });
     }
 

@@ -39,7 +39,10 @@ async function cloudIdFor(userId: string, resultId: string): Promise<string> {
  * Save a completed quiz without duplicating it on retry.
  * Existing incomplete sessions can be resumed.
  */
-export async function saveCloudResult(result: QuizResult): Promise<boolean> {
+export async function saveCloudResult(
+  result: QuizResult,
+  expectedUserId?: string,
+): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
   const supabase = createClient();
@@ -50,6 +53,12 @@ export async function saveCloudResult(result: QuizResult): Promise<boolean> {
   if (!authData.user) return false;
 
   const userId = authData.user.id;
+
+  // Prevent a queued result from being uploaded to another learner's account.
+  if (expectedUserId && expectedUserId !== userId) {
+    return false;
+  }
+
   const cloudSessionId = await cloudIdFor(userId, result.id);
 
   const domainId = result.config.domainId === "all" ? null : domainMapping[result.config.domainId];

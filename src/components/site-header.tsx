@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Cloud } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { buttonHero } from "@/components/ui";
+import { syncPendingCloudResults } from "@/services/quiz-sync";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -18,31 +19,60 @@ export function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    const supabase = createClient();
+  
+useEffect(() => {
+  let active = true;
+  const supabase = createClient();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) {
-        setSignedIn(Boolean(session?.user));
-        setAuthReady(true);
-      }
+  const retryPending = () => {
+    void syncPendingCloudResults().catch((error: unknown) => {
+      console.error("Could not synchronize pending quizzes:", error);
     });
+  };
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (active) {
-        setSignedIn(Boolean(data.user));
-        setAuthReady(true);
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!active) return;
+
+    setSignedIn(Boolean(session?.user));
+    setAuthReady(true);
+
+    if (session?.user) {
+      // Start synchronization outside the auth callback.
+      setTimeout(() => {
+        if (active) retryPending();
+      }, 0);
+    }
+  });
+
+  void supabase.auth.getUser().then(
+    ({ data }) => {
+      if (!active) return;
+
+      setSignedIn(Boolean(data.user));
+      setAuthReady(true);
+
+      if (data.user) {
+        retryPending();
       }
-    });
+    },
+    (error: unknown) => {
+      console.error("Could not check authentication:", error);
+      if (active) setAuthReady(true);
+    }
+  );
 
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  // Retry pending uploads when the browser reconnects.
+  window.addEventListener("online", retryPending);
+
+  return () => {
+    active = false;
+    subscription.unsubscribe();
+    window.removeEventListener("online", retryPending);
+  };
+}, []);
+
 
   async function handleSignOut() {
     const supabase = createClient();
