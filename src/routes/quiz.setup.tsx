@@ -68,10 +68,17 @@ function QuizSetup() {
     }
   }
 
-  function startQuiz() {
+  const [confirmReplace, setConfirmReplace] = useState(false);
+
+  function startQuiz(force = false) {
+    if (!force && quizStore.getActive()) {
+      setConfirmReplace(true);
+      return;
+    }
     const picked = buildQuiz(config);
     if (picked.length === 0) return;
     if (quizStore.start(config, picked)) {
+      setConfirmReplace(false);
       void navigate({ to: "/quiz/run" });
     }
   }
@@ -226,12 +233,29 @@ function QuizSetup() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={startQuiz} disabled={available === 0} className={buttonPrimary}>
+          <button type="button" onClick={() => startQuiz()} disabled={available === 0} className={buttonPrimary}>
             <Play className="h-4 w-4" aria-hidden />
             Start quiz
           </button>
           <Pill tone="brand">{mode === "practice" ? "Explanations after every answer" : "Feedback at the end"}</Pill>
         </div>
+
+        {confirmReplace ? (
+          <div role="alertdialog" aria-label="Active quiz in progress" className="rounded-xl border border-warning bg-muted p-4">
+            <p className="text-sm font-semibold text-foreground">You already have a quiz in progress.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Starting a new quiz will discard its unfinished answers. Completed results are kept.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button type="button" onClick={() => void navigate({ to: "/quiz/run" })} className={buttonPrimary}>
+                Resume existing quiz
+              </button>
+              <button type="button" onClick={() => startQuiz(true)} className={buttonSecondary}>
+                Start new quiz
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 text-center">
