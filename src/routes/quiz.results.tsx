@@ -9,8 +9,8 @@ import { topicName } from "@/data/syllabus";
 import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar } from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/results")({
-  validateSearch: (search: Record<string, unknown>): { result?: string } => ({
-    result: typeof search.result === "string" ? search.result : undefined,
+  validateSearch: (search: Record<string, unknown>): { result?: string | undefined } => ({
+    result: typeof search["result"] === "string" ? search["result"] : undefined,
   }),
   head: () => ({
     meta: [

@@ -8,8 +8,8 @@ import { quizStore } from "@/store/quiz-session";
 import { buttonPrimary, buttonSecondary, Pill } from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/setup")({
-  validateSearch: (search: Record<string, unknown>): { topicId?: string } => ({
-    topicId: typeof search.topicId === "string" ? search.topicId : undefined,
+  validateSearch: (search: Record<string, unknown>): { topicId?: string | undefined } => ({
+    topicId: typeof search["topicId"] === "string" ? search["topicId"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -41,7 +41,7 @@ const COUNT_OPTIONS: CountSelection[] = [5, 10, 20, "max"];
 
 function QuizSetup() {
   const navigate = useNavigate();
-  const preselectedTopicId = Route.useSearch().topicId;
+  const { topicId: preselectedTopicId } = Route.useSearch();
   const preselected = topics.find((t) => t.id === preselectedTopicId);
 
   const [domainId, setDomainId] = useState<DomainId | "all">(preselected?.domainId ?? "all");

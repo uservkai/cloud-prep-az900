@@ -53,6 +53,16 @@ function QuizRun() {
   }
 
   const question = session.questions[session.index];
+  if (!question) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+        <p className="text-sm text-muted-foreground">This quiz question could not be loaded.</p>
+        <Link to="/quiz/setup" className={`${buttonPrimary} mt-4`}>
+          Start a new quiz
+        </Link>
+      </div>
+    );
+  }
   const isPractice = session.config.mode === "practice";
   const chosen = session.choices[question.id] ?? null;
   const submittedChoice = session.submitted[question.id] ?? null;
