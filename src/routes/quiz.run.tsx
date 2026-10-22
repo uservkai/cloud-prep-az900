@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Flag } from "lucide-react";
 import { topicName } from "@/data/syllabus";
 import { isChoiceCorrect } from "@/services/quiz-service";
@@ -31,9 +31,10 @@ function QuizRun() {
   const navigate = useNavigate();
   const session = useQuizSession();
   const [redirecting, setRedirecting] = useState(false);
+  const finishingRef = useRef(false);
 
   useEffect(() => {
-    if (!session) {
+    if (!session && !finishingRef.current) {
       setRedirecting(true);
       void navigate({ to: "/quiz/setup" });
     }
@@ -53,6 +54,16 @@ function QuizRun() {
   }
 
   const question = session.questions[session.index];
+  if (!question) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+        <p className="text-sm text-muted-foreground">This quiz question could not be loaded.</p>
+        <Link to="/quiz/setup" className={`${buttonPrimary} mt-4`}>
+          Start a new quiz
+        </Link>
+      </div>
+    );
+  }
   const isPractice = session.config.mode === "practice";
   const chosen = session.choices[question.id] ?? null;
   const submittedChoice = session.submitted[question.id] ?? null;
@@ -74,9 +85,12 @@ function QuizRun() {
   }
 
   function finishQuiz() {
+    finishingRef.current = true;
     const result = quizStore.finish();
     if (result) {
       void navigate({ to: "/quiz/results", search: { result: result.id } });
+    } else {
+      finishingRef.current = false;
     }
   }
 

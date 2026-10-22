@@ -9,8 +9,8 @@ import { topicName } from "@/data/syllabus";
 import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar } from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/results")({
-  validateSearch: (search: Record<string, unknown>): { result?: string } => ({
-    result: typeof search.result === "string" ? search.result : undefined,
+  validateSearch: (search: Record<string, unknown>): { result?: string | undefined } => ({
+    result: typeof search["result"] === "string" ? search["result"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -66,6 +66,7 @@ function QuizResults() {
   const skipped = result.items.filter((i) => i.chosenOptionId === null);
 
   function retry() {
+    if (!result) return;
     const picked = buildQuiz(result.config);
     if (picked.length === 0) return;
     if (quizStore.start(result.config, picked)) {

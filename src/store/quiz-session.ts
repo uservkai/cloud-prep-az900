@@ -101,6 +101,7 @@ export const quizStore = {
     const session = state.session;
     if (!session || session.config.mode !== "practice") return;
     const question = session.questions[session.index];
+    if (!question) return;
     const choice = session.choices[question.id];
     if (!choice || session.submitted[question.id]) return;
     setState({

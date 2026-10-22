@@ -62,6 +62,7 @@ function MistakesReview() {
   }
 
   function practiseMistakes() {
+    if (!mistakes) return;
     const ids = mistakes.map((m) => m.entry.questionId).slice(0, 20);
     const picked = buildQuizFromQuestionIds(ids);
     if (picked.length === 0) return;
