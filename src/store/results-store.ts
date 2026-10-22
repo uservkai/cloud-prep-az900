@@ -51,14 +51,23 @@ export interface MistakeEntry {
 }
 
 /**
- * Latest incorrect answer per question across all stored results, newest
- * attempt first. Unanswered (skipped) questions are not mistakes.
+ * Find the latest incorrect answer for each question
+ * from a supplied collection of completed quiz results.
+ *
+ * Works with both localStorage and Supabase results.
  */
-export function latestMistakes(): MistakeEntry[] {
+export function latestMistakesFromResults(results: QuizResult[]): MistakeEntry[] {
   const byQuestion = new Map<string, MistakeEntry>();
-  for (const result of loadResults()) {
+
+  // Sort newest first, regardless of where results came from.
+  const ordered = [...results].sort(
+    (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+  );
+
+  for (const result of ordered) {
     for (const item of result.items) {
       if (item.correct || item.chosenOptionId === null) continue;
+
       if (!byQuestion.has(item.questionId)) {
         byQuestion.set(item.questionId, {
           questionId: item.questionId,
@@ -69,19 +78,44 @@ export function latestMistakes(): MistakeEntry[] {
       }
     }
   }
+
   return [...byQuestion.values()];
 }
 
-export function mistakeQuestions(): Array<{
+/** Preserve the original localStorage-based functionality. */
+export function latestMistakes(): MistakeEntry[] {
+  return latestMistakesFromResults(loadResults());
+}
+
+/** Resolve mistakes into questions and selected answer text. */
+export function mistakeQuestionsFromResults(results: QuizResult[]): Array<{
   entry: MistakeEntry;
   chosenText: string;
 }> {
-  return latestMistakes()
+  return latestMistakesFromResults(results)
     .map((entry) => {
       const question = questionById(entry.questionId);
+
       if (!question) return null;
-      const chosen = question.options.find((o) => o.id === entry.chosenOptionId);
-      return { entry, chosenText: chosen?.text ?? "Unknown answer" };
+
+      const chosen = question.options.find((option) => option.id === entry.chosenOptionId);
+
+      return {
+        entry,
+        chosenText: chosen?.text ?? "Unknown answer",
+      };
     })
-    .filter((v): v is { entry: MistakeEntry; chosenText: string } => v !== null);
+    .filter(
+      (
+        value,
+      ): value is {
+        entry: MistakeEntry;
+        chosenText: string;
+      } => value !== null,
+    );
+}
+
+/** Existing API for local Mistakes Review. */
+export function mistakeQuestions() {
+  return mistakeQuestionsFromResults(loadResults());
 }

@@ -1,7 +1,13 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, X, PlayCircle, ExternalLink } from "lucide-react";
-import { mistakeQuestions } from "@/store/results-store";
+import {
+  mistakeQuestions,
+  mistakeQuestionsFromResults,
+} from "@/store/results-store";
+import { createClient } from "@/lib/supabase/client";
+import { loadCloudResults } from "@/services/cloud-results";
 import { buildQuizFromQuestionIds, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
 import type { QuizConfig } from "@/types/quiz";
@@ -30,11 +36,81 @@ export const Route = createFileRoute("/review")({
 
 function MistakesReview() {
   const navigate = useNavigate();
-  const [mistakes, setMistakes] = useState<ReturnType<typeof mistakeQuestions> | null>(null);
+
+  const [mistakes, setMistakes] = useState<
+    ReturnType<typeof mistakeQuestions> | null
+  >(null);
+
+  const [dataSource, setDataSource] = useState<
+    "local" | "cloud" | null
+  >(null);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMistakes(mistakeQuestions());
+    let active = true;
+
+    async function loadMistakes() {
+      try {
+        const supabase = createClient();
+
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) throw error;
+        if (!active) return;
+
+        if (data.user) {
+          // Signed-in learners see their own cloud history.
+          const cloudResults = await loadCloudResults();
+
+          if (active) {
+            setMistakes(mistakeQuestionsFromResults(cloudResults));
+            setDataSource("cloud");
+          }
+        } else {
+          // Guests continue using their local quiz history.
+          setMistakes(mistakeQuestions());
+          setDataSource("local");
+        }
+      } catch (error) {
+        console.error("Failed to load mistakes:", error);
+
+        if (active) {
+          setLoadError(
+            "Unable to load your saved mistakes. Please check your connection and try again."
+          );
+        }
+      }
+    }
+
+    void loadMistakes();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+        <h1 className="font-display text-2xl font-bold">
+          Mistakes review
+        </h1>
+
+        <p role="alert" className="mt-4 text-sm text-danger">
+          {loadError}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className={buttonPrimary + " mt-6"}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (!mistakes) {
     return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><p className="text-sm text-muted-foreground">Loading your mistakes…</p></div>;
@@ -84,8 +160,17 @@ function MistakesReview() {
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Mistakes review</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mistakes.length} question{mistakes.length === 1 ? "" : "s"} you answered incorrectly, with the answer you chose.
+            {mistakes.length} question
+            {mistakes.length === 1 ? "" : "s"} you answered
+            incorrectly, with the answer you chose.
           </p>
+
+          <p className="mt-2 text-xs text-muted-foreground">
+            {dataSource === "cloud"
+              ? "Showing mistakes saved to your CloudPrep account."
+              : "Showing mistakes saved on this device."}
+          </p>
+
         </div>
         <button type="button" onClick={practiseMistakes} className={buttonPrimary}>
           <PlayCircle className="h-4 w-4" aria-hidden />
