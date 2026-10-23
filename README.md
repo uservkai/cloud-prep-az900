@@ -1,3 +1,4 @@
+
 # CloudPrep AZ-900
 
 **CloudPrep AZ-900** is an interactive learning and exam preparation platform designed to help learners prepare for the Microsoft Azure Fundamentals (AZ-900) certification.
@@ -8,11 +9,11 @@ Built for the **1MillionDevs Vibe Coding Hackathon** using AI-assisted developme
 
 ### Live Application
 
-**[Launch CloudPrep AZ-900](https://cloud-prep-az900.vercel.app/)**
+[**Launch CloudPrep AZ-900**](https://cloud-prep-az900.vercel.app/)
 
 ### Features
 
-- **500 reviewed practice questions** organized around the AZ-900 syllabus and its learning objectives.
+- **500 reviewed practice questions** organized across 12 AZ-900 syllabus topics and their learning objectives.
 - **Topic-based practice:** Select specific Azure domains and topics.
 - **Flexible quiz configuration:** Choose difficulty levels and question counts.
 - **Practice mode:** Receive immediate feedback and explanations after answering.
@@ -82,11 +83,23 @@ npm run build
 ### How CloudPrep Works
 
 1. Select an Azure domain or topic.
-2. Configure your quiz difficulty, number of questions, and practice mode.
+2. Configure your quiz difficulty, number of questions, and quiz mode.
 3. Answer questions and receive feedback based on your selected mode.
 4. View your results and identify topics requiring improvement.
 5. Review mistakes and continue practising.
 6. Optionally create an account to synchronize completed results and maintain personalized progress.
+
+### Scalability and Future Growth
+
+CloudPrep AZ-900 was built as a functional MVP with an architecture that supports future expansion.
+
+- **Extensible content:** The question bank is organized across 12 syllabus topics, with reusable quiz workflows that can accommodate additional questions and learning content.
+- **Multi-user support:** Supabase handles authentication and cloud synchronization of completed results, while account-specific sessions keep learners' progress separate.
+- **Managed infrastructure:** Vercel provides application hosting, while Supabase manages authentication and persistent data storage. This reduces the infrastructure that must be managed directly as usage grows.
+- **Certification expansion:** The existing learning experience provides a foundation for supporting other certifications, such as AI-900 and SC-900, with additional content and configuration.
+- **Future development:** Potential improvements include cohort analytics, institutional partnerships, and expanded certification coverage.
+
+The application has not yet undergone large-scale load testing. Its performance under substantial concurrent usage will require further validation and optimization.
 
 ### Data and Privacy
 
