@@ -1,5 +1,8 @@
+/* eslint-disable prettier/prettier */
 import type { Difficulty, DomainId, QuizQuestion, ReviewStatus } from "@/types/quiz";
 import { topicById } from "./syllabus";
+import { batch1Questions } from "./questions-expanded/cloud-concepts-batch-1";
+import { expansionCandidateQuestions } from "./questions-expanded/az900-candidates";
 
 /**
  * Original, manually curated AZ-900 practice questions.
@@ -155,7 +158,10 @@ const specs: QuestionSpec[] = [
     stem: "Which statement best describes the consumption-based model in the cloud?",
     options: [
       ["a", "A fixed monthly invoice is paid regardless of how many resources were used"],
-      ["b", "Payment is made only for resources actually used, and capacity can be adjusted as demand changes"],
+      [
+        "b",
+        "Payment is made only for resources actually used, and capacity can be adjusted as demand changes",
+      ],
       ["c", "Hardware must be purchased up front and depreciated over several years"],
       ["d", "A one-time licence fee grants unlimited resource usage"],
     ],
@@ -178,7 +184,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "Which comparison of pricing models is correct?",
     options: [
-      ["a", "Capital expenditure pays for compute capacity up front; consumption billing treats it as an operational expense paid as it is used"],
+      [
+        "a",
+        "Capital expenditure pays for compute capacity up front; consumption billing treats it as an operational expense paid as it is used",
+      ],
       ["b", "Capital expenditure is billed monthly based on usage meters"],
       ["c", "Consumption billing requires signing a multi-year hardware lease"],
       ["d", "Operational expenditure only applies to on-premises servers"],
@@ -203,7 +212,10 @@ const specs: QuestionSpec[] = [
     stem: "Which statement describes serverless computing in Azure?",
     options: [
       ["a", "The developer provisions and patches dedicated virtual machines that run the code"],
-      ["b", "Code runs in response to events, scales automatically, and the developer is abstracted from the underlying infrastructure"],
+      [
+        "b",
+        "Code runs in response to events, scales automatically, and the developer is abstracted from the underlying infrastructure",
+      ],
       ["c", "There are no servers involved at all — computations run without hardware"],
       ["d", "Capacity must be reserved in advance and is billed whether or not it is used"],
     ],
@@ -224,8 +236,7 @@ const specs: QuestionSpec[] = [
   {
     id: "d1-ben-scalability",
     topicId: "d1-cloud-benefits",
-    skillObjective:
-      "Describe the benefits of high availability and scalability in the cloud",
+    skillObjective: "Describe the benefits of high availability and scalability in the cloud",
     difficulty: "foundational",
     stem: "A web application automatically adds server instances during the morning traffic peak and removes them at night. Which cloud benefit does this demonstrate?",
     options: [
@@ -249,8 +260,7 @@ const specs: QuestionSpec[] = [
   {
     id: "d1-ben-high-availability",
     topicId: "d1-cloud-benefits",
-    skillObjective:
-      "Describe the benefits of high availability and scalability in the cloud",
+    skillObjective: "Describe the benefits of high availability and scalability in the cloud",
     difficulty: "foundational",
     stem: "Deploying identical workload instances across multiple availability zones in a region primarily supports which benefit?",
     options: [
@@ -274,8 +284,7 @@ const specs: QuestionSpec[] = [
   {
     id: "d1-ben-reliability-predictability",
     topicId: "d1-cloud-benefits",
-    skillObjective:
-      "Describe the benefits of reliability and predictability in the cloud",
+    skillObjective: "Describe the benefits of reliability and predictability in the cloud",
     difficulty: "foundational",
     stem: "Which pairing of cloud benefits is delivered through service-level agreements (SLAs) together with well-architected, redundant deployments?",
     options: [
@@ -303,7 +312,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "Which scenario demonstrates the manageability benefit of cloud computing?",
     options: [
-      ["a", "A fleet of resources is provisioned, scaled and monitored consistently through a portal, a command-line interface and templates"],
+      [
+        "a",
+        "A fleet of resources is provisioned, scaled and monitored consistently through a portal, a command-line interface and templates",
+      ],
       ["b", "The provider certifies its datacenters against industry standards"],
       ["c", "Traffic doubles during a sale and the platform absorbs it automatically"],
       ["d", "Data is encrypted automatically at rest in the datacenter"],
@@ -402,7 +414,10 @@ const specs: QuestionSpec[] = [
     difficulty: "intermediate",
     stem: "Which workload is the most appropriate use case for IaaS?",
     options: [
-      ["a", "A custom application that needs a specifically configured operating system and full control over networking and middleware"],
+      [
+        "a",
+        "A custom application that needs a specifically configured operating system and full control over networking and middleware",
+      ],
       ["b", "A department that just wants to use a ready-made email application"],
       ["c", "A microservice that should scale to zero and run only when triggered by events"],
       ["d", "A simple blog the owner wants with zero infrastructure decisions"],
@@ -428,8 +443,14 @@ const specs: QuestionSpec[] = [
     difficulty: "intermediate",
     stem: "Which statement correctly describes Azure region pairs?",
     options: [
-      ["a", "Each Azure region is paired with another region within the same geography, and platform updates are rolled out to one region of the pair at a time"],
-      ["b", "Each Azure region is paired with a region in a different geography for legal isolation"],
+      [
+        "a",
+        "Each Azure region is paired with another region within the same geography, and platform updates are rolled out to one region of the pair at a time",
+      ],
+      [
+        "b",
+        "Each Azure region is paired with a region in a different geography for legal isolation",
+      ],
       ["c", "Region pairs are only available for sovereign regions such as Azure Government"],
       ["d", "A region pair shares the same physical datacenter for faster replication"],
     ],
@@ -453,7 +474,10 @@ const specs: QuestionSpec[] = [
     stem: "What is an availability zone in Azure?",
     options: [
       ["a", "A separate Azure geography used for data residency"],
-      ["b", "Physically separate datacenter areas within a single Azure region, each with independent power, cooling and networking"],
+      [
+        "b",
+        "Physically separate datacenter areas within a single Azure region, each with independent power, cooling and networking",
+      ],
       ["c", "A logical grouping of subscriptions for billing"],
       ["d", "A second Azure region reserved for disaster recovery"],
     ],
@@ -525,7 +549,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "What does an Azure subscription provide?",
     options: [
-      ["a", "A unit of billing and management: it defines which Azure resources can be provisioned and how they are paid for"],
+      [
+        "a",
+        "A unit of billing and management: it defines which Azure resources can be provisioned and how they are paid for",
+      ],
       ["b", "A free tier of services for students only"],
       ["c", "A virtual network that automatically spans all Azure regions"],
       ["d", "An identity store for user accounts and groups"],
@@ -549,8 +576,14 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "How do Azure datacenters relate to Azure regions?",
     options: [
-      ["a", "Each region is a single datacenter, and every datacenter belongs to exactly one subscription"],
-      ["b", "A region is made up of one or more datacenters connected through a low-latency network within the region"],
+      [
+        "a",
+        "Each region is a single datacenter, and every datacenter belongs to exactly one subscription",
+      ],
+      [
+        "b",
+        "A region is made up of one or more datacenters connected through a low-latency network within the region",
+      ],
       ["c", "Datacenters exist only in availability zones and cannot be part of a plain region"],
       ["d", "Each datacenter is managed independently by the customer who deploys there"],
     ],
@@ -572,13 +605,18 @@ const specs: QuestionSpec[] = [
   {
     id: "d2-cn-containers-vs-vms",
     topicId: "d2-compute-networking",
-    skillObjective:
-      "Compare compute types, including containers, virtual machines, and functions",
+    skillObjective: "Compare compute types, including containers, virtual machines, and functions",
     difficulty: "intermediate",
     stem: "Which statement correctly compares containers with virtual machines?",
     options: [
-      ["a", "Containers require a full guest operating system per instance, while VMs share the host kernel"],
-      ["b", "Containers share the host operating system and start faster with less overhead, while VMs include their own OS"],
+      [
+        "a",
+        "Containers require a full guest operating system per instance, while VMs share the host kernel",
+      ],
+      [
+        "b",
+        "Containers share the host operating system and start faster with less overhead, while VMs include their own OS",
+      ],
       ["c", "Containers can only run on Windows, while VMs can run any operating system"],
       ["d", "VMs are always cheaper than containers for every workload"],
     ],
@@ -622,8 +660,7 @@ const specs: QuestionSpec[] = [
   {
     id: "d2-cn-functions-event-driven",
     topicId: "d2-compute-networking",
-    skillObjective:
-      "Compare compute types, including containers, virtual machines, and functions",
+    skillObjective: "Compare compute types, including containers, virtual machines, and functions",
     difficulty: "foundational",
     stem: "Which Azure compute service is designed to run event-triggered code without provisioning any servers, scaling automatically and stopping billing when idle?",
     options: [
@@ -701,9 +738,18 @@ const specs: QuestionSpec[] = [
     difficulty: "advanced",
     stem: "What is the difference between a public endpoint and a private endpoint for an Azure service?",
     options: [
-      ["a", "A public endpoint resolves to a public IP reachable from the internet, while a private endpoint assigns the service a private IP address inside your virtual network"],
-      ["b", "A public endpoint is faster; a private endpoint adds a separate subscription fee per request"],
-      ["c", "A private endpoint exposes the service on the internet with a shared secret, while a public endpoint requires VPN"],
+      [
+        "a",
+        "A public endpoint resolves to a public IP reachable from the internet, while a private endpoint assigns the service a private IP address inside your virtual network",
+      ],
+      [
+        "b",
+        "A public endpoint is faster; a private endpoint adds a separate subscription fee per request",
+      ],
+      [
+        "c",
+        "A private endpoint exposes the service on the internet with a shared secret, while a public endpoint requires VPN",
+      ],
       ["d", "There is no difference — both terms describe the same connection string"],
     ],
     correctOptionId: "a",
@@ -820,12 +866,14 @@ const specs: QuestionSpec[] = [
   {
     id: "d2-st-databox",
     topicId: "d2-storage",
-    skillObjective:
-      "Describe migration options, including Azure Migrate and Azure Data Box",
+    skillObjective: "Describe migration options, including Azure Migrate and Azure Data Box",
     difficulty: "foundational",
     stem: "An organisation has roughly 80 TB of data to import into Azure, but the available network link is slow and unreliable. Which migration option suits this scenario?",
     options: [
-      ["a", "Azure Data Box — a physical device shipped to the site, filled with data, and returned to Microsoft for import"],
+      [
+        "a",
+        "Azure Data Box — a physical device shipped to the site, filled with data, and returned to Microsoft for import",
+      ],
       ["b", "Azure Migrate assessment only"],
       ["c", "Uploading the data over the network with Azure File Sync"],
       ["d", "AzCopy over the WAN, retrying until complete"],
@@ -852,7 +900,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "What is Microsoft Entra ID?",
     options: [
-      ["a", "A cloud-based identity and access management service that provides directory services, authentication and access control for Azure and other applications"],
+      [
+        "a",
+        "A cloud-based identity and access management service that provides directory services, authentication and access control for Azure and other applications",
+      ],
       ["b", "A physical firewall appliance installed in Azure datacenters"],
       ["c", "A virtual networking service that replaces the need for subnets"],
       ["d", "A monitoring tool that audits network latency"],
@@ -926,7 +977,10 @@ const specs: QuestionSpec[] = [
     stem: "What does Azure role-based access control (RBAC) govern?",
     options: [
       ["a", "Which password complexity rules apply to user accounts"],
-      ["b", "Which actions a security principal can perform on which Azure resources, at which scope"],
+      [
+        "b",
+        "Which actions a security principal can perform on which Azure resources, at which scope",
+      ],
       ["c", "Which traffic is allowed through a virtual network firewall"],
       ["d", "Which devices may enrol in mobile device management"],
     ],
@@ -973,8 +1027,14 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "What is the purpose of the defense-in-depth model?",
     options: [
-      ["a", "To concentrate all security spending on the strongest possible single perimeter firewall"],
-      ["b", "To layer multiple security controls at each level so that a failure at one layer does not compromise the whole system"],
+      [
+        "a",
+        "To concentrate all security spending on the strongest possible single perimeter firewall",
+      ],
+      [
+        "b",
+        "To layer multiple security controls at each level so that a failure at one layer does not compromise the whole system",
+      ],
       ["c", "To outsource all security controls to the cloud provider"],
       ["d", "To replace identity management with network segmentation alone"],
     ],
@@ -1095,7 +1155,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "What is the primary purpose of applying tags to Azure resources?",
     options: [
-      ["a", "To organise resources with metadata such as cost centre, environment or owner, supporting cost tracking and governance"],
+      [
+        "a",
+        "To organise resources with metadata such as cost centre, environment or owner, supporting cost tracking and governance",
+      ],
       ["b", "To encrypt the resource's data at rest"],
       ["c", "To assign public IP addresses automatically"],
       ["d", "To restrict which regions the resource can be moved to"],
@@ -1145,7 +1208,10 @@ const specs: QuestionSpec[] = [
     difficulty: "intermediate",
     stem: "What is the purpose of Microsoft Purview in the Azure data estate?",
     options: [
-      ["a", "To automatically catalogue, classify and govern data across on-premises and cloud sources"],
+      [
+        "a",
+        "To automatically catalogue, classify and govern data across on-premises and cloud sources",
+      ],
       ["b", "To block all inbound internet traffic to a virtual network"],
       ["c", "To compress storage blobs to reduce tier costs"],
       ["d", "To deploy ARM templates across subscriptions"],
@@ -1170,7 +1236,10 @@ const specs: QuestionSpec[] = [
     stem: "A critical resource group is protected with a CanNotDelete lock. What happens when an administrator with full RBAC permissions tries to delete it?",
     options: [
       ["a", "The deletion succeeds because RBAC permissions override locks"],
-      ["b", "The deletion is blocked until the lock is removed, even though the administrator has delete permission"],
+      [
+        "b",
+        "The deletion is blocked until the lock is removed, even though the administrator has delete permission",
+      ],
       ["c", "The deletion succeeds but data is archived first"],
       ["d", "The resource group is moved to the archive tier instead of being deleted"],
     ],
@@ -1194,7 +1263,10 @@ const specs: QuestionSpec[] = [
     stem: "A team already has full RBAC access to a subscription. Which statement best describes when Azure Policy is still needed?",
     options: [
       ["a", "Policy is redundant — RBAC permissions alone govern everything about resources"],
-      ["b", "Policy controls which resource configurations are allowed — for example limiting regions or requiring tags — regardless of who performs the action"],
+      [
+        "b",
+        "Policy controls which resource configurations are allowed — for example limiting regions or requiring tags — regardless of who performs the action",
+      ],
       ["c", "Policy is only used to grant users their first permissions"],
       ["d", "Policy replaces network security groups for resource access"],
     ],
@@ -1219,7 +1291,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "Which option describes Azure Cloud Shell?",
     options: [
-      ["a", "A browser-based shell with Bash or PowerShell preinstalled with Azure tooling, authenticated to your subscription"],
+      [
+        "a",
+        "A browser-based shell with Bash or PowerShell preinstalled with Azure tooling, authenticated to your subscription",
+      ],
       ["b", "A desktop application that must be installed on Windows only"],
       ["c", "A mobile app for viewing billing invoices"],
       ["d", "A template format for declaring Azure resources"],
@@ -1315,7 +1390,10 @@ const specs: QuestionSpec[] = [
     difficulty: "foundational",
     stem: "Which benefit does infrastructure as code (IaC) provide for Azure deployments?",
     options: [
-      ["a", "Infrastructure definitions are written once as code, versioned and reviewed, producing consistent and repeatable deployments"],
+      [
+        "a",
+        "Infrastructure definitions are written once as code, versioned and reviewed, producing consistent and repeatable deployments",
+      ],
       ["b", "It guarantees the lowest possible resource cost across all regions"],
       ["c", "It removes the need for any identity management on deployed resources"],
       ["d", "It converts all deployments to happen only through the portal"],
@@ -1459,7 +1537,7 @@ const specs: QuestionSpec[] = [
   },
 ];
 
-export const questions: QuizQuestion[] = specs.map(buildQuestion);
+export const questions: QuizQuestion[] = [...specs.map(buildQuestion), ...batch1Questions, ...expansionCandidateQuestions,];
 
 /** Questions allowed in active quizzes: manually reviewed with a verified source. */
 export const reviewedQuestions: QuizQuestion[] = questions.filter(

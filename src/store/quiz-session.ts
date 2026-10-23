@@ -1,25 +1,46 @@
+/* eslint-disable prettier/prettier */
+
 import { useSyncExternalStore } from "react";
-import type { QuizConfig, QuizQuestion, QuizResult, QuizSession } from "@/types/quiz";
+import type {
+  QuizConfig,
+  QuizQuestion,
+  QuizResult,
+  QuizSession,
+} from "@/types/quiz";
 import { reviewedQuestions } from "@/data/questions";
 import { buildResult } from "@/services/quiz-service";
-import { saveResult } from "@/store/results-store";
+import {
+  saveResult,
+  saveAccountResult,
+} from "@/store/results-store";
 
 /**
- * Active quiz session, persisted to localStorage so a refresh or reopen
- * resumes exactly where the learner left off. Only question ids are stored;
- * questions are re-resolved from the current bank and validated on restore.
- * Completed results / mistakes live in results-store and are never touched here.
+ * Active quiz sessions are stored separately for guests and
+ * each authenticated learner.
+ *
+ * Only question IDs are persisted. Questions are resolved
+ * and validated against the current reviewed question bank.
+ *
+ * Completed quiz results are managed by results-store.
  */
 
+/* Legacy shared key: preserved, never automatically assigned. */
 export const STORAGE_KEY = "cloudprep.activeSession.v2";
-const LEGACY_KEYS = ["cloudprep.session.v1"];
-const STORAGE_VERSION = 2;
+
+const STORAGE_PREFIX = "cloudprep.activeSession.v3.";
+const STORAGE_VERSION = 3;
+
+function storageKeyFor(userId: string | null): string {
+  return userId
+    ? `${STORAGE_PREFIX}user.${userId}`
+    : `${STORAGE_PREFIX}guest`;
+}
 
 interface StoreState {
   session: QuizSession | null;
   lastResultId: string | null;
-  /** Set when a saved session existed but could not be resumed. */
   restoreError: string | null;
+  ownerReady: boolean;
 }
 
 interface PersistedSession {
@@ -39,15 +60,33 @@ interface PersistedState {
   lastResultId: string | null;
 }
 
-const SERVER_STATE: StoreState = { session: null, lastResultId: null, restoreError: null };
+const SERVER_STATE: StoreState = {
+  session: null,
+  lastResultId: null,
+  restoreError: null,
+  ownerReady: false,
+};
+
 let state: StoreState = SERVER_STATE;
+
 const listeners = new Set<() => void>();
+
 let hydrated = false;
+let ownerUserId: string | null = null;
+let currentStorageKey: string | null = null;
 
 const INVALID_MESSAGE =
   "Your previous quiz could not be resumed because its saved data is out of date or incomplete. Please start a new quiz.";
 
-function isStringRecord(value: unknown): value is Record<string, string> {
+function notify(): void {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function isStringRecord(
+  value: unknown,
+): value is Record<string, string> {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -56,38 +95,72 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   );
 }
 
-/** Validate a persisted session against the current question bank. */
+/**
+ * Validate a persisted quiz against the current question bank.
+ */
 export function restoreSession(raw: unknown): QuizSession | null {
   if (typeof raw !== "object" || raw === null) return null;
+
   const p = raw as Partial<PersistedSession>;
-  if (typeof p.id !== "string" || typeof p.startedAt !== "string") return null;
-  if (typeof p.config !== "object" || p.config === null) return null;
-  if (!Array.isArray(p.questionIds) || p.questionIds.length === 0) return null;
-  if (!isStringRecord(p.choices) || !isStringRecord(p.submitted)) return null;
-  if (typeof p.index !== "number" || !Number.isInteger(p.index)) return null;
-  if (p.index < 0 || p.index >= p.questionIds.length) return null;
+
+  if (typeof p.id !== "string" || typeof p.startedAt !== "string") {
+    return null;
+  }
+
+  if (typeof p.config !== "object" || p.config === null) {
+    return null;
+  }
+
+  if (!Array.isArray(p.questionIds) || p.questionIds.length === 0) {
+    return null;
+  }
+
+  if (!isStringRecord(p.choices) || !isStringRecord(p.submitted)) {
+    return null;
+  }
+
+  if (
+    typeof p.index !== "number" ||
+    !Number.isInteger(p.index) ||
+    p.index < 0 ||
+    p.index >= p.questionIds.length
+  ) {
+    return null;
+  }
 
   const byId = new Map(reviewedQuestions.map((q) => [q.id, q]));
   const ordered: QuizQuestion[] = [];
   const seen = new Set<string>();
+
   for (const id of p.questionIds) {
-    const q = typeof id === "string" ? byId.get(id) : undefined;
-    if (!q || seen.has(id)) return null;
+    const question =
+      typeof id === "string" ? byId.get(id) : undefined;
+
+    if (!question || seen.has(id)) return null;
+
     seen.add(id);
-    ordered.push(q);
+    ordered.push(question);
   }
-  // Every stored answer must reference a question in the set and a real option.
+
   for (const answers of [p.choices, p.submitted]) {
-    for (const [qid, oid] of Object.entries(answers)) {
-      const q = byId.get(qid);
-      if (!q || !seen.has(qid) || !q.options.some((o) => o.id === oid)) return null;
+    for (const [questionId, optionId] of Object.entries(answers)) {
+      const question = byId.get(questionId);
+
+      if (
+        !question ||
+        !seen.has(questionId) ||
+        !question.options.some((option) => option.id === optionId)
+      ) {
+        return null;
+      }
     }
   }
 
   return {
     id: p.id,
     startedAt: p.startedAt,
-    deadline: typeof p.deadline === "string" ? p.deadline : null,
+    deadline:
+      typeof p.deadline === "string" ? p.deadline : null,
     config: p.config,
     questions: ordered,
     index: p.index,
@@ -96,18 +169,21 @@ export function restoreSession(raw: unknown): QuizSession | null {
   };
 }
 
-function toPersisted(s: StoreState): PersistedState {
-  const session = s.session;
+function toPersisted(current: StoreState): PersistedState {
+  const session = current.session;
+
   return {
     version: STORAGE_VERSION,
-    lastResultId: s.lastResultId,
+    lastResultId: current.lastResultId,
     session: session
       ? {
           id: session.id,
           startedAt: session.startedAt,
           deadline: session.deadline ?? null,
           config: session.config,
-          questionIds: session.questions.map((q) => q.id),
+          questionIds: session.questions.map(
+            (question) => question.id,
+          ),
           index: session.index,
           choices: session.choices,
           submitted: session.submitted,
@@ -116,60 +192,148 @@ function toPersisted(s: StoreState): PersistedState {
   };
 }
 
+/**
+ * Load only the currently identified learner's session.
+ */
 function hydrate(): void {
-  if (hydrated || typeof window === "undefined") return;
+  if (
+    hydrated ||
+    !state.ownerReady ||
+    !currentStorageKey ||
+    typeof window === "undefined"
+  ) {
+    return;
+  }
+
   hydrated = true;
-  state = { session: null, lastResultId: null, restoreError: null };
+
+  state = {
+    ...SERVER_STATE,
+    ownerReady: true,
+  };
+
   try {
-    for (const key of LEGACY_KEYS) {
-      if (window.localStorage.getItem(key) !== null) {
-        window.localStorage.removeItem(key);
-      }
-    }
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(currentStorageKey);
     if (!raw) return;
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
-    const lastResultId = typeof parsed?.lastResultId === "string" ? parsed.lastResultId : null;
-    if (parsed?.version !== STORAGE_VERSION) throw new Error("version");
-    if (parsed.session == null) {
-      state = { ...state, lastResultId };
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      (parsed as Partial<PersistedState>).version !==
+        STORAGE_VERSION
+    ) {
+      throw new Error("Unsupported quiz session version.");
+    }
+
+    const saved = parsed as PersistedState;
+
+    const lastResultId =
+      typeof saved.lastResultId === "string"
+        ? saved.lastResultId
+        : null;
+
+    if (saved.session === null || saved.session === undefined) {
+      state = {
+        ...state,
+        lastResultId,
+      };
       return;
     }
-    const session = restoreSession(parsed.session);
-    if (!session) throw new Error("invalid");
-    state = { session, lastResultId, restoreError: null };
-  } catch {
-    state = { session: null, lastResultId: null, restoreError: INVALID_MESSAGE };
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
+
+    const session = restoreSession(saved.session);
+
+    if (!session) {
+      throw new Error("Invalid stored quiz session.");
     }
+
+    state = {
+      session,
+      lastResultId,
+      restoreError: null,
+      ownerReady: true,
+    };
+  } catch {
+    // Preserve existing data for troubleshooting.
+    state = {
+      session: null,
+      lastResultId: null,
+      restoreError: INVALID_MESSAGE,
+      ownerReady: true,
+    };
   }
 }
 
+/**
+ * Persist only to the active learner's own storage key.
+ */
 function persist(): void {
-  if (typeof window === "undefined") return;
+  if (
+    typeof window === "undefined" ||
+    !state.ownerReady ||
+    !currentStorageKey
+  ) {
+    return;
+  }
+
   try {
     if (state.session) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersisted(state)));
+      window.localStorage.setItem(
+        currentStorageKey,
+        JSON.stringify(toPersisted(state)),
+      );
     } else {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(currentStorageKey);
     }
   } catch {
-    // Storage unavailable (private mode etc.) — session stays in memory.
+    // Storage may be unavailable. Keep the session in memory.
   }
 }
 
 function setState(next: StoreState): void {
   state = next;
   persist();
-  for (const listener of listeners) listener();
+  notify();
+}
+
+/**
+ * Set the current learner after Supabase establishes auth state.
+ *
+ * Signed-out learners use guest storage.
+ * Authenticated learners use their own user-ID storage.
+ */
+export function setQuizOwner(userId: string | null): void {
+  if (typeof window === "undefined") return;
+
+  const nextKey = storageKeyFor(userId);
+
+  if (state.ownerReady && currentStorageKey === nextKey) {
+    return;
+  }
+
+  // The previous learner's session is already persisted.
+  // Do not copy it to the next learner.
+  ownerUserId = userId;
+  currentStorageKey = nextKey;
+
+  hydrated = false;
+
+  state = {
+    ...SERVER_STATE,
+    ownerReady: true,
+  };
+
+  hydrate();
+  notify();
 }
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 function getSnapshot(): StoreState {
@@ -178,29 +342,55 @@ function getSnapshot(): StoreState {
 }
 
 function makeId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  if (
+    typeof crypto !== "undefined" &&
+    "randomUUID" in crypto
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `s_${Date.now().toString(36)}_${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
 }
 
-/** Remaining time for a timed session, computed from its original deadline. */
-export function remainingMs(session: QuizSession, now: number = Date.now()): number | null {
+/**
+ * Remaining time for a timed quiz.
+ */
+export function remainingMs(
+  session: QuizSession,
+  now: number = Date.now(),
+): number | null {
   if (!session.deadline) return null;
-  return Math.max(0, new Date(session.deadline).getTime() - now);
+
+  return Math.max(
+    0,
+    new Date(session.deadline).getTime() - now,
+  );
 }
 
 export const quizStore = {
   /**
-   * Start a new session. Returns false when the question set is empty.
-   * Callers must confirm with the learner before replacing an active session.
+   * Start a new quiz belonging to the current learner.
    */
-  start(config: QuizConfig, pickedQuestions: QuizQuestion[], timeLimitMs?: number): boolean {
-    if (pickedQuestions.length === 0) return false;
+  start(
+    config: QuizConfig,
+    pickedQuestions: QuizQuestion[],
+    timeLimitMs?: number,
+  ): boolean {
+    if (!state.ownerReady || pickedQuestions.length === 0) {
+      return false;
+    }
+
     const now = Date.now();
+
     setState({
       session: {
         id: makeId(),
         startedAt: new Date(now).toISOString(),
-        deadline: timeLimitMs ? new Date(now + timeLimitMs).toISOString() : null,
+        deadline: timeLimitMs
+          ? new Date(now + timeLimitMs).toISOString()
+          : null,
         config,
         questions: pickedQuestions,
         index: 0,
@@ -209,81 +399,251 @@ export const quizStore = {
       },
       lastResultId: null,
       restoreError: null,
+      ownerReady: true,
     });
+
     return true;
   },
 
   getActive(): QuizSession | null {
+    if (!state.ownerReady) return null;
+
     hydrate();
     return state.session;
   },
 
-  /** Select an option. In practice mode a submitted answer can no longer change. */
+  /**
+   * Choose an answer.
+   * Submitted answers are locked in practice mode.
+   */
   choose(questionId: string, optionId: string): void {
+    if (!state.ownerReady) return;
+
     const session = state.session;
     if (!session) return;
-    if (session.config.mode === "practice" && session.submitted[questionId]) return;
+
+    if (
+      session.config.mode === "practice" &&
+      session.submitted[questionId]
+    ) {
+      return;
+    }
+
     setState({
       ...state,
-      session: { ...session, choices: { ...session.choices, [questionId]: optionId } },
+      session: {
+        ...session,
+        choices: {
+          ...session.choices,
+          [questionId]: optionId,
+        },
+      },
     });
   },
 
-  /** Practice mode: submit the selected answer and lock the question. */
+  /**
+   * Submit the current practice question.
+   */
   submitCurrent(): void {
+    if (!state.ownerReady) return;
+
     const session = state.session;
-    if (!session || session.config.mode !== "practice") return;
+
+    if (!session || session.config.mode !== "practice") {
+      return;
+    }
+
     const question = session.questions[session.index];
     if (!question) return;
+
     const choice = session.choices[question.id];
-    if (!choice || session.submitted[question.id]) return;
+
+    if (!choice || session.submitted[question.id]) {
+      return;
+    }
+
     setState({
       ...state,
-      session: { ...session, submitted: { ...session.submitted, [question.id]: choice } },
+      session: {
+        ...session,
+        submitted: {
+          ...session.submitted,
+          [question.id]: choice,
+        },
+      },
     });
   },
 
   goTo(index: number): void {
+    if (!state.ownerReady) return;
+
     const session = state.session;
     if (!session) return;
-    const clamped = Math.max(0, Math.min(index, session.questions.length - 1));
-    setState({ ...state, session: { ...session, index: clamped } });
+
+    const clamped = Math.max(
+      0,
+      Math.min(index, session.questions.length - 1),
+    );
+
+    setState({
+      ...state,
+      session: {
+        ...session,
+        index: clamped,
+      },
+    });
   },
 
   next(): void {
-    const session = state.session;
+    const session = quizStore.getActive();
     if (!session) return;
+
     quizStore.goTo(session.index + 1);
   },
 
   prev(): void {
-    const session = state.session;
+    const session = quizStore.getActive();
     if (!session) return;
+
     quizStore.goTo(session.index - 1);
   },
 
-  /** Finish the quiz: grade, store the result, clear only the active session. */
-  finish(): QuizResult | null {
+  /**
+   * Finish a quiz and save the result only to its owner.
+   */
+  async finish(): Promise<QuizResult | null> {
+    if (
+      !state.ownerReady ||
+      !currentStorageKey
+    ) {
+      throw new Error(
+        "Quiz ownership has not been established.",
+      );
+    }
+
     const session = state.session;
     if (!session) return null;
+
+    const expectedStorageKey = currentStorageKey;
+    const expectedUserId = ownerUserId;
+
     const result = buildResult(session);
-    saveResult(result);
-    setState({ session: null, lastResultId: result.id, restoreError: null });
+
+    if (typeof window !== "undefined") {
+      const { createClient } = await import(
+        "@/lib/supabase/client"
+      );
+
+      const supabase = createClient();
+      const { data, error } =
+        await supabase.auth.getSession();
+
+      if (error) throw error;
+
+      const actualUserId = data.session?.user?.id ?? null;
+
+      if (
+        actualUserId !== expectedUserId ||
+        currentStorageKey !== expectedStorageKey ||
+        state.session?.id !== session.id
+      ) {
+        throw new Error(
+          "Your account changed during quiz completion. Please return to your quiz.",
+        );
+      }
+
+      if (expectedUserId) {
+        const { enqueuePendingCloudResult } =
+          await import("@/services/quiz-sync");
+
+        // Verify ownership again after the asynchronous import.
+        if (
+          currentStorageKey !== expectedStorageKey ||
+          state.session?.id !== session.id
+        ) {
+          throw new Error(
+            "Quiz account changed during completion.",
+          );
+        }
+
+        // Preserve offline sync and account-local history.
+        enqueuePendingCloudResult(
+          expectedUserId,
+          result,
+        );
+
+        saveAccountResult(
+          result,
+          expectedUserId,
+        );
+      } else {
+        saveResult(result);
+      }
+    }
+
+    if (
+      currentStorageKey !== expectedStorageKey ||
+      state.session?.id !== session.id
+    ) {
+      throw new Error(
+        "Quiz account changed during completion.",
+      );
+    }
+
+    setState({
+      session: null,
+      lastResultId: result.id,
+      restoreError: null,
+      ownerReady: true,
+    });
+
+    if (expectedUserId) {
+      void import("@/services/quiz-sync")
+        .then(({ syncPendingCloudResults }) =>
+          syncPendingCloudResults(expectedUserId),
+        )
+        .catch((error: unknown) => {
+          console.error(
+            "Unable to synchronize quiz result:",
+            error,
+          );
+        });
+    }
+
     return result;
   },
 
-  /** Abandon the active quiz. Completed results and mistakes are untouched. */
+  /**
+   * Abandon the current learner's unfinished quiz.
+   */
   clear(): void {
-    setState({ ...state, session: null, restoreError: null });
+    if (!state.ownerReady) return;
+
+    setState({
+      ...state,
+      session: null,
+      restoreError: null,
+    });
   },
 
   dismissRestoreError(): void {
-    if (state.restoreError) setState({ ...state, restoreError: null });
+    if (!state.ownerReady || !state.restoreError) {
+      return;
+    }
+
+    setState({
+      ...state,
+      restoreError: null,
+    });
   },
 };
 
 function useStore(): StoreState {
-  return useSyncExternalStore(subscribe, getSnapshot, () => SERVER_STATE);
+  return useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    () => SERVER_STATE,
+  );
 }
 
 export function useQuizSession(): QuizSession | null {
@@ -292,4 +652,8 @@ export function useQuizSession(): QuizSession | null {
 
 export function useRestoreError(): string | null {
   return useStore().restoreError;
+}
+
+export function useQuizOwnerReady(): boolean {
+  return useStore().ownerReady;
 }

@@ -2,11 +2,20 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import type { QuizResult } from "@/types/quiz";
-import { findResult } from "@/store/results-store";
+import { loadResults, loadAccountResults } from "@/store/results-store";
+import { loadCloudResults } from "@/services/cloud-results";
+import { createClient } from "@/lib/supabase/client";
 import { buildQuiz, questionById } from "@/services/quiz-service";
 import { quizStore } from "@/store/quiz-session";
 import { topicName } from "@/data/syllabus";
-import { AccuracyRing, buttonPrimary, buttonSecondary, EmptyState, Pill, ProgressBar } from "@/components/ui";
+import {
+  AccuracyRing,
+  buttonPrimary,
+  buttonSecondary,
+  EmptyState,
+  Pill,
+  ProgressBar,
+} from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/results")({
   validateSearch: (search: Record<string, unknown>): { result?: string | undefined } => ({
@@ -34,16 +43,112 @@ export const Route = createFileRoute("/quiz/results")({
 function QuizResults() {
   const navigate = useNavigate();
   const search = Route.useSearch();
+
   const [result, setResult] = useState<QuizResult | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setResult(findResult(search.result));
-    setLoaded(true);
+    let active = true;
+    let requestId = 0;
+
+    const supabase = createClient();
+
+    function pickResult(results: QuizResult[]): QuizResult | null {
+      if (search.result) {
+        return results.find((item) => item.id === search.result) ?? null;
+      }
+
+      return results[0] ?? null;
+    }
+
+    function handleAccountChange(userId: string | null) {
+      if (!active) return;
+
+      const thisRequest = ++requestId;
+
+      // Clear the previous learner's result immediately.
+      setResult(null);
+      setLoaded(false);
+      setLoadError(null);
+
+      if (!userId) {
+        // Guests can only see guest-owned local results.
+        setResult(pickResult(loadResults()));
+        setLoaded(true);
+        return;
+      }
+
+      // Check this account's own local results first.
+      const localResult = pickResult(loadAccountResults(userId));
+
+      if (localResult) {
+        setResult(localResult);
+        setLoaded(true);
+        return;
+      }
+
+      // Older account results may exist only in Supabase.
+      // Run this outside the auth-state callback.
+      setTimeout(() => {
+        if (!active || thisRequest !== requestId) return;
+
+        void loadCloudResults()
+          .then((cloudResults) => {
+            if (!active || thisRequest !== requestId) return;
+            setResult(pickResult(cloudResults));
+          })
+          .catch((error: unknown) => {
+            if (!active || thisRequest !== requestId) return;
+
+            console.error("Could not load quiz result:", error);
+            setLoadError("We couldn't retrieve this result from your account. Please try again.");
+          })
+          .finally(() => {
+            if (active && thisRequest === requestId) {
+              setLoaded(true);
+            }
+          });
+      }, 0);
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        handleAccountChange(session?.user?.id ?? null);
+      }
+    });
+
+    return () => {
+      active = false;
+      requestId++;
+      subscription.unsubscribe();
+    };
   }, [search.result]);
 
   if (!loaded) {
-    return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><p className="text-sm text-muted-foreground">Loading results…</p></div>;
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
+        <p className="text-sm text-muted-foreground">Loading results…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+        <h1 className="font-display text-xl font-bold">Unable to load result</h1>
+
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {loadError}
+        </p>
+
+        <Link to="/dashboard" className={`${buttonPrimary} mt-6`}>
+          Back to dashboard
+        </Link>
+      </div>
+    );
   }
 
   if (!result) {
@@ -78,10 +183,12 @@ function QuizResults() {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Quiz complete</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+            Quiz complete
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {result.mode === "practice" ? "Practice mode" : "Assessment mode"} · {result.total} questions ·{" "}
-            {new Date(result.completedAt).toLocaleString()}
+            {result.mode === "practice" ? "Practice mode" : "Assessment mode"} · {result.total}{" "}
+            questions · {new Date(result.completedAt).toLocaleString()}
           </p>
         </div>
         <Pill tone={pct >= 70 ? "success" : pct >= 40 ? "brand" : "danger"}>
@@ -104,14 +211,16 @@ function QuizResults() {
           </div>
           <div>
             <dt className="text-sm text-muted-foreground">Skipped</dt>
-            <dd className="font-display text-2xl font-bold text-muted-foreground">{skipped.length}</dd>
+            <dd className="font-display text-2xl font-bold text-muted-foreground">
+              {skipped.length}
+            </dd>
           </div>
         </dl>
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Score calculated from your submitted answers. This is practice feedback, not an official Microsoft
-        score or a guarantee of exam readiness.
+        Score calculated from your submitted answers. This is practice feedback, not an official
+        Microsoft score or a guarantee of exam readiness.
       </p>
 
       {/* Performance by topic */}
@@ -149,7 +258,11 @@ function QuizResults() {
         <div className="mt-4 flex flex-wrap gap-2">
           {result.items.map((item, i) => {
             const q = questionById(item.questionId);
-            const tone = item.correct ? "success" : item.chosenOptionId === null ? "neutral" : "danger";
+            const tone = item.correct
+              ? "success"
+              : item.chosenOptionId === null
+                ? "neutral"
+                : "danger";
             return (
               <span
                 key={item.questionId}
@@ -188,7 +301,6 @@ function QuizResults() {
           Back to dashboard
         </Link>
       </div>
-
     </div>
   );
 }

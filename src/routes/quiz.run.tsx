@@ -95,9 +95,9 @@ function QuizRun() {
     }
   }
 
-  function finishQuiz() {
+  async function finishQuiz() {
     finishingRef.current = true;
-    const result = quizStore.finish();
+    const result = await quizStore.finish();
     if (result) {
       void navigate({ to: "/quiz/results", search: { result: result.id } });
     } else {
@@ -186,7 +186,8 @@ function QuizRun() {
 
         {!isPractice && unanswered > 0 && atLast ? (
           <p className="mt-4 text-sm text-danger">
-            {unanswered} question{unanswered === 1 ? "" : "s"} not answered — unanswered questions count as incorrect.
+            {unanswered} question{unanswered === 1 ? "" : "s"} not answered — unanswered questions
+            count as incorrect.
           </p>
         ) : null}
 

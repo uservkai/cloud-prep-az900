@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as TopicsRouteImport } from './routes/topics'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as QuizResultsRouteImport } from './routes/quiz.results'
 import { Route as QuizRunRouteImport } from './routes/quiz.run'
 import { Route as QuizSetupRouteImport } from './routes/quiz.setup'
@@ -20,6 +23,16 @@ import { Route as QuizSetupRouteImport } from './routes/quiz.setup'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -36,6 +49,11 @@ const TopicsRoute = TopicsRouteImport.update({
   id: '/topics',
   path: '/topics',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const QuizResultsRoute = QuizResultsRouteImport.update({
   id: '/quiz/results',
@@ -55,18 +73,24 @@ const QuizSetupRoute = QuizSetupRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/review': typeof ReviewRoute
   '/topics': typeof TopicsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/quiz/results': typeof QuizResultsRoute
   '/quiz/run': typeof QuizRunRoute
   '/quiz/setup': typeof QuizSetupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/review': typeof ReviewRoute
   '/topics': typeof TopicsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/quiz/results': typeof QuizResultsRoute
   '/quiz/run': typeof QuizRunRoute
   '/quiz/setup': typeof QuizSetupRoute
@@ -74,9 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/review': typeof ReviewRoute
   '/topics': typeof TopicsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/quiz/results': typeof QuizResultsRoute
   '/quiz/run': typeof QuizRunRoute
   '/quiz/setup': typeof QuizSetupRoute
@@ -85,27 +112,36 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
+    | '/auth'
     | '/dashboard'
     | '/review'
     | '/topics'
+    | '/auth/callback'
     | '/quiz/results'
     | '/quiz/run'
     | '/quiz/setup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
+    | '/auth'
     | '/dashboard'
     | '/review'
     | '/topics'
+    | '/auth/callback'
     | '/quiz/results'
     | '/quiz/run'
     | '/quiz/setup'
   id:
     | '__root__'
     | '/'
+    | '/account'
+    | '/auth'
     | '/dashboard'
     | '/review'
     | '/topics'
+    | '/auth/callback'
     | '/quiz/results'
     | '/quiz/run'
     | '/quiz/setup'
@@ -113,6 +149,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
+  AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   ReviewRoute: typeof ReviewRoute
   TopicsRoute: typeof TopicsRoute
@@ -128,6 +166,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -150,6 +202,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/topics'
       preLoaderRoute: typeof TopicsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/quiz/results': {
       id: '/quiz/results'
@@ -175,8 +234,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
+  AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRoute,
   ReviewRoute: ReviewRoute,
   TopicsRoute: TopicsRoute,

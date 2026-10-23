@@ -1,85 +1,193 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+/* eslint-disable prettier/prettier */
+
+import {
+  createFileRoute,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ArrowRight, Play } from "lucide-react";
-import type { CountSelection, Difficulty, DomainId, PracticeMode, QuizConfig } from "@/types/quiz";
-import { domains, topics, topicsForDomain } from "@/data/syllabus";
-import { buildQuiz, countAvailableQuestions } from "@/services/quiz-service";
-import { quizStore } from "@/store/quiz-session";
-import { buttonPrimary, buttonSecondary, Pill } from "@/components/ui";
+
+import type {
+  CountSelection,
+  Difficulty,
+  DomainId,
+  PracticeMode,
+  QuizConfig,
+} from "@/types/quiz";
+
+import {
+  domains,
+  topics,
+  topicsForDomain,
+} from "@/data/syllabus";
+
+import {
+  buildQuiz,
+  countAvailableQuestions,
+} from "@/services/quiz-service";
+
+import {
+  quizStore,
+  useQuizOwnerReady,
+} from "@/store/quiz-session";
+
+import {
+  buttonPrimary,
+  buttonSecondary,
+  Pill,
+} from "@/components/ui";
 
 export const Route = createFileRoute("/quiz/setup")({
-  validateSearch: (search: Record<string, unknown>): { topicId?: string | undefined } => ({
-    topicId: typeof search["topicId"] === "string" ? search["topicId"] : undefined,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { topicId?: string | undefined } => ({
+    topicId:
+      typeof search["topicId"] === "string"
+        ? search["topicId"]
+        : undefined,
   }),
+
   head: () => ({
     meta: [
-      { title: "Quiz setup — CloudPrep AZ-900" },
+      {
+        title: "Quiz setup — CloudPrep AZ-900",
+      },
       {
         name: "description",
-        content: "Choose a topic, question count, difficulty and practice mode for your AZ-900 quiz.",
+        content:
+          "Choose a topic, question count, difficulty and practice mode for your AZ-900 quiz.",
       },
-      { property: "og:title", content: "Quiz setup — CloudPrep AZ-900" },
+      {
+        property: "og:title",
+        content: "Quiz setup — CloudPrep AZ-900",
+      },
       {
         property: "og:description",
-        content: "Configure your AZ-900 practice quiz: topic, count, difficulty and mode.",
+        content:
+          "Configure your AZ-900 practice quiz: topic, count, difficulty and mode.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
     ],
   }),
+
   component: QuizSetup,
 });
 
-const DIFFICULTY_OPTIONS: Array<{ value: Difficulty | "mixed"; label: string }> = [
+const DIFFICULTY_OPTIONS: Array<{
+  value: Difficulty | "mixed";
+  label: string;
+}> = [
   { value: "mixed", label: "Mixed" },
   { value: "foundational", label: "Foundational" },
   { value: "intermediate", label: "Intermediate" },
   { value: "advanced", label: "Advanced" },
 ];
 
-const COUNT_OPTIONS: CountSelection[] = [5, 10, 20, "max"];
+const COUNT_OPTIONS: CountSelection[] = [
+  5,
+  10,
+  20,
+  "max",
+];
 
 function QuizSetup() {
   const navigate = useNavigate();
-  const { topicId: preselectedTopicId } = Route.useSearch();
-  const preselected = topics.find((t) => t.id === preselectedTopicId);
 
-  const [domainId, setDomainId] = useState<DomainId | "all">(preselected?.domainId ?? "all");
-  const [topicId, setTopicId] = useState<string | "all">(preselected?.id ?? "all");
-  const [difficulty, setDifficulty] = useState<Difficulty | "mixed">("mixed");
-  const [mode, setMode] = useState<PracticeMode>("practice");
-  const [requestedCount, setRequestedCount] = useState<CountSelection>(10);
+  const ownerReady = useQuizOwnerReady();
+
+  const { topicId: preselectedTopicId } =
+    Route.useSearch();
+
+  const preselected = topics.find(
+    (topic) => topic.id === preselectedTopicId,
+  );
+
+  const [domainId, setDomainId] = useState<
+    DomainId | "all"
+  >(preselected?.domainId ?? "all");
+
+  const [topicId, setTopicId] = useState<
+    string | "all"
+  >(preselected?.id ?? "all");
+
+  const [difficulty, setDifficulty] = useState<
+    Difficulty | "mixed"
+  >("mixed");
+
+  const [mode, setMode] =
+    useState<PracticeMode>("practice");
+
+  const [requestedCount, setRequestedCount] =
+    useState<CountSelection>(10);
+
+  const [confirmReplace, setConfirmReplace] =
+    useState(false);
 
   const domainTopics = useMemo(
-    () => (domainId === "all" ? topics : topicsForDomain(domainId)),
+    () =>
+      domainId === "all"
+        ? topics
+        : topicsForDomain(domainId),
     [domainId],
   );
 
-  const config: QuizConfig = { domainId, topicId, difficulty, mode, requestedCount };
+  const config: QuizConfig = {
+    domainId,
+    topicId,
+    difficulty,
+    mode,
+    requestedCount,
+  };
+
   const available = countAvailableQuestions(config);
+
   const effectiveCount =
-    requestedCount === "max" ? available : Math.min(requestedCount, available);
+    requestedCount === "max"
+      ? available
+      : Math.min(requestedCount, available);
 
   function updateDomain(next: DomainId | "all") {
     setDomainId(next);
-    // Keep the topic only if it belongs to the newly chosen domain.
-    if (next !== "all" && topicId !== "all" && !topicsForDomain(next).some((t) => t.id === topicId)) {
+
+    if (
+      next !== "all" &&
+      topicId !== "all" &&
+      !topicsForDomain(next).some(
+        (topic) => topic.id === topicId,
+      )
+    ) {
       setTopicId("all");
     }
   }
 
-  const [confirmReplace, setConfirmReplace] = useState(false);
-
+  /**
+   * Start a quiz only after the current learner
+   * has been identified.
+   */
   function startQuiz(force = false) {
+    if (!ownerReady) return;
+
     if (!force && quizStore.getActive()) {
       setConfirmReplace(true);
       return;
     }
+
     const picked = buildQuiz(config);
     if (picked.length === 0) return;
+
     if (quizStore.start(config, picked)) {
       setConfirmReplace(false);
-      void navigate({ to: "/quiz/run" });
+
+      void navigate({
+        to: "/quiz/run",
+      });
     }
   }
 
@@ -88,46 +196,74 @@ function QuizSetup() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Set up your quiz</h1>
+      <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+        Set up your quiz
+      </h1>
+
       <p className="mt-2 text-sm text-muted-foreground">
-        Only reviewed questions with a verified Microsoft Learn source enter active quizzes.
+        Only reviewed questions with a verified Microsoft
+        Learn source enter active quizzes.
       </p>
 
       <div className="mt-8 space-y-6 rounded-2xl border bg-card p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="setup-domain" className="text-sm font-semibold text-foreground">
+            <label
+              htmlFor="setup-domain"
+              className="text-sm font-semibold text-foreground"
+            >
               Domain
             </label>
+
             <select
               id="setup-domain"
               className={selectClass}
               value={domainId}
-              onChange={(e) => updateDomain(e.target.value as DomainId | "all")}
+              onChange={(event) =>
+                updateDomain(
+                  event.target.value as DomainId | "all",
+                )
+              }
             >
               <option value="all">All domains</option>
-              {domains.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
+
+              {domains.map((domain) => (
+                <option
+                  key={domain.id}
+                  value={domain.id}
+                >
+                  {domain.name}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="setup-topic" className="text-sm font-semibold text-foreground">
+            <label
+              htmlFor="setup-topic"
+              className="text-sm font-semibold text-foreground"
+            >
               Topic
             </label>
+
             <select
               id="setup-topic"
               className={selectClass}
               value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
+              onChange={(event) =>
+                setTopicId(event.target.value)
+              }
             >
-              <option value="all">All topics in selection</option>
-              {domainTopics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+              <option value="all">
+                All topics in selection
+              </option>
+
+              {domainTopics.map((topic) => (
+                <option
+                  key={topic.id}
+                  value={topic.id}
+                >
+                  {topic.name}
                 </option>
               ))}
             </select>
@@ -135,17 +271,29 @@ function QuizSetup() {
         </div>
 
         <div>
-          <span id="difficulty-label" className="text-sm font-semibold text-foreground">
+          <span
+            id="difficulty-label"
+            className="text-sm font-semibold text-foreground"
+          >
             Difficulty
           </span>
-          <div role="radiogroup" aria-labelledby="difficulty-label" className="mt-2 flex flex-wrap gap-2">
+
+          <div
+            role="radiogroup"
+            aria-labelledby="difficulty-label"
+            className="mt-2 flex flex-wrap gap-2"
+          >
             {DIFFICULTY_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 role="radio"
-                aria-checked={difficulty === option.value}
-                onClick={() => setDifficulty(option.value)}
+                aria-checked={
+                  difficulty === option.value
+                }
+                onClick={() =>
+                  setDifficulty(option.value)
+                }
                 className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
                   difficulty === option.value
                     ? "border-brand bg-brand-soft text-primary"
@@ -159,55 +307,96 @@ function QuizSetup() {
         </div>
 
         <div>
-          <span id="mode-label" className="text-sm font-semibold text-foreground">
+          <span
+            id="mode-label"
+            className="text-sm font-semibold text-foreground"
+          >
             Practice mode
           </span>
-          <div role="radiogroup" aria-labelledby="mode-label" className="mt-2 grid gap-3 sm:grid-cols-2">
+
+          <div
+            role="radiogroup"
+            aria-labelledby="mode-label"
+            className="mt-2 grid gap-3 sm:grid-cols-2"
+          >
             <button
               type="button"
               role="radio"
               aria-checked={mode === "practice"}
-              onClick={() => setMode("practice")}
+              onClick={() =>
+                setMode("practice")
+              }
               className={`rounded-xl border p-4 text-left transition-colors ${
-                mode === "practice" ? "border-brand bg-brand-soft" : "border-input bg-card hover:border-brand/50"
+                mode === "practice"
+                  ? "border-brand bg-brand-soft"
+                  : "border-input bg-card hover:border-brand/50"
               }`}
             >
-              <span className="block text-sm font-bold text-foreground">Practice</span>
+              <span className="block text-sm font-bold text-foreground">
+                Practice
+              </span>
+
               <span className="mt-1 block text-xs text-muted-foreground">
-                Instant feedback and explanations after each answer.
+                Instant feedback and explanations after
+                each answer.
               </span>
             </button>
+
             <button
               type="button"
               role="radio"
               aria-checked={mode === "assessment"}
-              onClick={() => setMode("assessment")}
+              onClick={() =>
+                setMode("assessment")
+              }
               className={`rounded-xl border p-4 text-left transition-colors ${
-                mode === "assessment" ? "border-brand bg-brand-soft" : "border-input bg-card hover:border-brand/50"
+                mode === "assessment"
+                  ? "border-brand bg-brand-soft"
+                  : "border-input bg-card hover:border-brand/50"
               }`}
             >
-              <span className="block text-sm font-bold text-foreground">Assessment</span>
+              <span className="block text-sm font-bold text-foreground">
+                Assessment
+              </span>
+
               <span className="mt-1 block text-xs text-muted-foreground">
-                Answers stay hidden until you finish and see your score.
+                Answers stay hidden until you finish
+                and see your score.
               </span>
             </button>
           </div>
         </div>
 
         <div>
-          <span id="count-label" className="text-sm font-semibold text-foreground">
+          <span
+            id="count-label"
+            className="text-sm font-semibold text-foreground"
+          >
             Question count
           </span>
-          <div role="radiogroup" aria-labelledby="count-label" className="mt-2 flex flex-wrap gap-2">
+
+          <div
+            role="radiogroup"
+            aria-labelledby="count-label"
+            className="mt-2 flex flex-wrap gap-2"
+          >
             {COUNT_OPTIONS.map((option) => {
-              const label = option === "max" ? `Max (${available})` : String(option);
+              const label =
+                option === "max"
+                  ? `Max (${available})`
+                  : String(option);
+
               return (
                 <button
                   key={String(option)}
                   type="button"
                   role="radio"
-                  aria-checked={requestedCount === option}
-                  onClick={() => setRequestedCount(option)}
+                  aria-checked={
+                    requestedCount === option
+                  }
+                  onClick={() =>
+                    setRequestedCount(option)
+                  }
                   className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
                     requestedCount === option
                       ? "border-brand bg-brand-soft text-primary"
@@ -224,33 +413,85 @@ function QuizSetup() {
         <div className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
           {available > 0 ? (
             <>
-              <strong className="font-semibold text-foreground">{available} reviewed question{available === 1 ? "" : "s"}</strong>{" "}
-              match this selection. The quiz will include {effectiveCount} question{effectiveCount === 1 ? "" : "s"}, each appearing only once.
+              <strong className="font-semibold text-foreground">
+                {available} reviewed question
+                {available === 1 ? "" : "s"}
+              </strong>{" "}
+              match this selection. The quiz will include{" "}
+              {effectiveCount} question
+              {effectiveCount === 1 ? "" : "s"},
+              each appearing only once.
             </>
           ) : (
-            <>No reviewed questions match this selection yet. Try widening the domain, topic or difficulty.</>
+            <>
+              No reviewed questions match this
+              selection yet. Try widening the domain,
+              topic or difficulty.
+            </>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => startQuiz()} disabled={available === 0} className={buttonPrimary}>
-            <Play className="h-4 w-4" aria-hidden />
+          <button
+            type="button"
+            onClick={() => startQuiz()}
+            disabled={
+              !ownerReady || available === 0
+            }
+            className={buttonPrimary}
+          >
+            <Play
+              className="h-4 w-4"
+              aria-hidden
+            />
             Start quiz
           </button>
-          <Pill tone="brand">{mode === "practice" ? "Explanations after every answer" : "Feedback at the end"}</Pill>
+
+          <Pill tone="brand">
+            {mode === "practice"
+              ? "Explanations after every answer"
+              : "Feedback at the end"}
+          </Pill>
         </div>
 
         {confirmReplace ? (
-          <div role="alertdialog" aria-label="Active quiz in progress" className="rounded-xl border border-warning bg-muted p-4">
-            <p className="text-sm font-semibold text-foreground">You already have a quiz in progress.</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Starting a new quiz will discard its unfinished answers. Completed results are kept.
+          <div
+            role="alertdialog"
+            aria-label="Active quiz in progress"
+            className="rounded-xl border border-warning bg-muted p-4"
+          >
+            <p className="text-sm font-semibold text-foreground">
+              You already have a quiz in progress.
             </p>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Starting a new quiz will discard its
+              unfinished answers. Completed results
+              are kept.
+            </p>
+
             <div className="mt-3 flex flex-wrap gap-3">
-              <button type="button" onClick={() => void navigate({ to: "/quiz/run" })} className={buttonPrimary}>
+              <button
+                type="button"
+                disabled={!ownerReady}
+                onClick={() =>
+                  void navigate({
+                    to: "/quiz/run",
+                  })
+                }
+                className={buttonPrimary}
+              >
                 Resume existing quiz
               </button>
-              <button type="button" onClick={() => startQuiz(true)} className={buttonSecondary}>
+
+              <button
+                type="button"
+                disabled={!ownerReady}
+                onClick={() =>
+                  startQuiz(true)
+                }
+                className={buttonSecondary}
+              >
                 Start new quiz
               </button>
             </div>
@@ -259,9 +500,20 @@ function QuizSetup() {
       </div>
 
       <div className="mt-6 text-center">
-        <button type="button" onClick={() => void navigate({ to: "/topics" })} className={`${buttonSecondary} border-transparent`}>
+        <button
+          type="button"
+          onClick={() =>
+            void navigate({
+              to: "/topics",
+            })
+          }
+          className={`${buttonSecondary} border-transparent`}
+        >
           Browse the topic catalogue
-          <ArrowRight className="h-4 w-4" aria-hidden />
+          <ArrowRight
+            className="h-4 w-4"
+            aria-hidden
+          />
         </button>
       </div>
     </div>
