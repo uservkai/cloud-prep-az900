@@ -5,9 +5,23 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * CloudPrep AZ-900 design system.
- * Light theme, deep navy + refined blue accents, subtle gradients.
- * All colors are oklch semantic tokens; utilities come from @theme inline.
+ * CloudPrep AZ-900 Design System
+ *
+ * Theme: Azure Blue + White + Charcoal
+ *
+ * Primary: Azure-inspired blue
+ * Secondary: Soft sky blue
+ * Typography: Charcoal
+ * Background: Pure white
+ * Cards: White
+ * Accents: Blue and muted gold
+ *
+ * Green: Correct answers and success indicators
+ * Red: Incorrect answers and errors
+ * Gold: Achievements, streaks and highlights
+ *
+ * Clean, modern and professional certification
+ * learning interface with a blue-first identity.
  */
 
 @theme inline {
@@ -17,70 +31,253 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-hover: var(--brand-hover);
   --color-navy: var(--navy);
+
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
+
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
   --color-warning: var(--warning);
+
+  /* Gold highlights */
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-warm-soft: var(--accent-warm-soft);
+  --color-accent-warm-foreground: var(--accent-warm-foreground);
+
+  /* Information elements */
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Chart and skill-domain colours */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
+/* =========================================================
+   LIGHT THEME
+   ========================================================= */
+
 :root {
+  /* Border radius */
   --radius: 0.75rem;
-  --background: oklch(0.985 0.005 245);
-  --foreground: oklch(0.24 0.05 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.05 265);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.05 265);
-  --primary: oklch(0.33 0.09 262);
-  --primary-foreground: oklch(0.98 0.01 250);
-  --secondary: oklch(0.95 0.015 250);
-  --secondary-foreground: oklch(0.3 0.07 262);
-  --muted: oklch(0.95 0.012 250);
-  --muted-foreground: oklch(0.52 0.03 258);
-  --accent: oklch(0.94 0.03 250);
-  --accent-foreground: oklch(0.3 0.07 262);
-  --destructive: oklch(0.62 0.21 25);
-  --destructive-foreground: oklch(0.98 0.01 250);
-  --border: oklch(0.91 0.015 250);
-  --input: oklch(0.91 0.015 250);
-  --ring: oklch(0.6 0.15 255);
-  --brand: oklch(0.58 0.18 255);
-  --brand-soft: oklch(0.94 0.035 250);
-  --navy: oklch(0.22 0.065 264);
-  --success: oklch(0.6 0.14 155);
-  --success-soft: oklch(0.94 0.05 155);
-  --danger: oklch(0.6 0.2 25);
-  --danger-soft: oklch(0.94 0.045 25);
-  --warning: oklch(0.72 0.15 75);
+
+  /* Main surfaces: white and charcoal */
+  --background: #ffffff;
+  --foreground: #1f2937;
+
+  /* Cards */
+  --card: #ffffff;
+  --card-foreground: #1f2937;
+
+  /* Popovers and dropdowns */
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+
+  /* Primary actions: blue */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  /* Secondary actions: soft blue */
+  --secondary: #eff6ff;
+  --secondary-foreground: #1e40af;
+
+  /* Neutral surfaces */
+  --muted: #f3f6fa;
+  --muted-foreground: #5b6575;
+
+  /* Interactive highlights */
+  --accent: #dbeafe;
+  --accent-foreground: #1e40af;
+
+  /* Destructive actions */
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+
+  /* Borders and input fields */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --input: #e2e8f0;
+
+  /* Focus indicators */
+  --ring: #2563eb;
+
+  /* Main brand identity: blue */
+  --brand: #2563eb;
+  --brand-soft: #eff6ff;
+  --brand-hover: #1d4ed8;
+
+  /* Dark surfaces */
+  --navy: #172554;
+
+  /* Success feedback */
+  --success: #166534;
+  --success-soft: #e6f2e8;
+
+  /* Error feedback */
+  --danger: #b42318;
+  --danger-soft: #fff0ed;
+
+  /* Warning feedback */
+  --warning: #946514;
+
+  /*
+   * Gold accents
+   * For achievements, streaks, milestones and highlights.
+   */
+  --accent-warm: #c49a46;
+  --accent-warm-soft: #fcf3df;
+  --accent-warm-foreground: #644714;
+
+  /*
+   * Information colour
+   * Azure-inspired blue for links, tags and hints.
+   */
+  --info: #2563eb;
+  --info-soft: #eff6ff;
+
+  /*
+   * AZ-900 chart palette
+   * Blue is dominant, with supporting contrasting colours.
+   */
+  --chart-1: #2563eb;
+  --chart-2: #0891b2;
+  --chart-3: #c49a46;
+  --chart-4: #7c3aed;
+  --chart-5: #e8795b;
 }
+
+/* =========================================================
+   DARK THEME
+   Activated only when a parent has the .dark class.
+   ========================================================= */
+
+.dark {
+  /* Main surfaces */
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+
+  /* Cards */
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+
+  /* Popovers */
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+
+  /* Primary actions */
+  --primary: #60a5fa;
+  --primary-foreground: #0f172a;
+
+  /* Secondary surfaces */
+  --secondary: #243b60;
+  --secondary-foreground: #dbeafe;
+
+  /* Muted surfaces */
+  --muted: #253247;
+  --muted-foreground: #b0bfd3;
+
+  /* Interactive highlights */
+  --accent: #243b60;
+  --accent-foreground: #dbeafe;
+
+  /* Destructive actions */
+  --destructive: #ef7065;
+  --destructive-foreground: #170c0b;
+
+  /* Borders and inputs */
+  --border: #334155;
+  --border-strong: #475569;
+  --input: #334155;
+
+  /* Focus indicators */
+  --ring: #60a5fa;
+
+  /* Brand colours */
+  --brand: #60a5fa;
+  --brand-soft: #1e3a5f;
+  --brand-hover: #93c5fd;
+
+  /* Dark surfaces */
+  --navy: #020617;
+
+  /* Success feedback */
+  --success: #79c992;
+  --success-soft: #213c2d;
+
+  /* Error feedback */
+  --danger: #ff8479;
+  --danger-soft: #472824;
+
+  /* Warning feedback */
+  --warning: #e6b96b;
+
+  /* Gold accents */
+  --accent-warm: #ddb66e;
+  --accent-warm-soft: #49391f;
+  --accent-warm-foreground: #f6dda9;
+
+  /* Information */
+  --info: #93c5fd;
+  --info-soft: #1e3a5f;
+
+  /* Chart colours */
+  --chart-1: #60a5fa;
+  --chart-2: #67e8f9;
+  --chart-3: #e2bd74;
+  --chart-4: #c4b5fd;
+  --chart-5: #fda4af;
+}
+
+/* =========================================================
+   TYPOGRAPHY
+   ========================================================= */
 
 @theme {
   --font-display: "Sora", "Manrope", sans-serif;
   --font-sans: "Manrope", system-ui, sans-serif;
 }
+
+/* =========================================================
+   BASE STYLES
+   ========================================================= */
 
 @layer base {
   * {
@@ -110,26 +307,54 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
+
+  a:not([class]) {
+    color: var(--color-info);
+  }
+
+  ::selection {
+    background-color: var(--color-brand-soft);
+    color: var(--color-foreground);
+  }
 }
 
-/* Subtle gradients kept in the design system, referenced by utility classes. */
+/* =========================================================
+   HOMEPAGE HERO BACKGROUND
+
+   Deep blue with brighter Azure highlights.
+
+   The existing utility name is preserved so
+   React components do not require changes.
+   ========================================================= */
+
 @utility bg-hero-navy {
-  background-image: radial-gradient(
-      1200px 500px at 85% -10%,
-      oklch(0.45 0.16 255 / 0.55),
-      transparent 60%
-    ),
-    radial-gradient(900px 420px at 10% 110%, oklch(0.4 0.13 262 / 0.6), transparent 55%),
-    linear-gradient(160deg, oklch(0.2 0.06 264), oklch(0.27 0.08 260));
+  background-image:
+    radial-gradient(ellipse at 85% 10%, rgba(96, 165, 250, 0.4), transparent 55%),
+    radial-gradient(ellipse at 10% 100%, rgba(37, 99, 235, 0.32), transparent 55%),
+    linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
 }
+
+/* =========================================================
+   BRAND GRADIENT TEXT
+
+   Rich blue transitioning into lighter sky blue.
+   ========================================================= */
 
 @utility text-gradient-brand {
-  background-image: linear-gradient(100deg, var(--color-brand), oklch(0.68 0.15 220));
+  background-image: linear-gradient(105deg, #2563eb 0%, #3b82f6 55%, #60a5fa 100%);
+
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
+/* =========================================================
+   PANEL BACKGROUND
+
+   Pure white without beige, brown or green tint.
+   ========================================================= */
+
 @utility bg-panel-gradient {
-  background-image: linear-gradient(180deg, oklch(1 0 0), oklch(0.975 0.012 248));
+  background-color: #ffffff;
+  background-image: none;
 }
